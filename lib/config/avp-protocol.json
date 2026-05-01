@@ -1,0 +1,494 @@
+[
+  {
+    "topic": "Peak Experience",
+    "order": 1,
+    "subquestions": [
+      {
+        "id": "peak_1",
+        "text": "I'd like to begin by asking you to think about your life as a whole and identify what might be called a peak experience — a moment that stands out as especially vivid, meaningful, or positive. Can you tell me about that experience?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "peak_1_1",
+            "text": "Where and when did this take place?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "peak_1_2",
+            "text": "Who else was involved in this moment?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "peak_1_3",
+            "text": "What were you thinking and feeling at the time?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "peak_1_3_1",
+                "text": "How did those feelings affect you afterward — did anything shift in how you saw yourself or your life?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          },
+          {
+            "id": "peak_1_4",
+            "text": "Why do you think this particular moment stands out for you? What does it say about who you are?",
+            "order": 4,
+            "probe_group": "sub2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Low Point",
+    "order": 2,
+    "subquestions": [
+      {
+        "id": "low_1",
+        "text": "Now I'd like to ask about the opposite — a low point, a time that was especially difficult, painful, or challenging. This doesn't have to be the very worst moment, just one that comes to mind as a low point in your story. Can you describe what happened?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "low_1_1",
+            "text": "When and where did this occur?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "low_1_2",
+            "text": "Who else was part of this experience?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "low_1_3",
+            "text": "What were you feeling in the midst of it?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "low_1_3_1",
+                "text": "How did you find your way through it — or are you still finding your way?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          },
+          {
+            "id": "low_1_4",
+            "text": "Looking back, what impact did this low point have on you — on your sense of self, your values, or your path forward?",
+            "order": 4,
+            "probe_group": "sub2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Turning Point",
+    "order": 3,
+    "subquestions": [
+      {
+        "id": "turning_1",
+        "text": "Many people can identify a turning point — a moment or period when something important shifted in who they are, what they value, or the direction their life took. Does anything come to mind as a turning point in your own story?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "turning_1_1",
+            "text": "Can you describe what happened — the circumstances leading up to it and what actually changed?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "turning_1_2",
+            "text": "Why do you see this as a turning point rather than just a significant event?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "turning_1_3",
+            "text": "How did this change ripple forward into later chapters of your life?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "turning_1_3_1",
+                "text": "Is there a 'before and after' quality to your sense of yourself — do you feel like a different person on the other side of it?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Earliest Memory",
+    "order": 4,
+    "subquestions": [
+      {
+        "id": "early_1",
+        "text": "I'd like to go back to the beginning of your story. What is one of your earliest memories — something from childhood that has stayed with you? It doesn't need to be dramatic; it can be something small and vivid.",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "early_1_1",
+            "text": "How old were you, roughly, and what do you remember about the setting?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "early_1_2",
+            "text": "What stands out most vividly in your memory of it?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "early_1_3",
+            "text": "What do you make of this memory now, looking back? Why do you think it has stayed with you?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "early_1_3_1",
+                "text": "Does this memory feel connected to anything important about who you became?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Positive Childhood Memory",
+    "order": 5,
+    "subquestions": [
+      {
+        "id": "childhood_pos_1",
+        "text": "Staying with your earlier years — can you share a particularly happy or positive memory from childhood or adolescence? A moment that left a warm impression.",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "childhood_pos_1_1",
+            "text": "Who was part of this memory, and what made it feel so good?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "childhood_pos_1_2",
+            "text": "What were you thinking and feeling at the time?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "childhood_pos_1_3",
+            "text": "Why do you think this memory has stayed with you? What significance does it hold in your story?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "childhood_pos_1_3_1",
+                "text": "Does it connect to something you've continued to value or pursue in your life since then?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Negative or Difficult Childhood Memory",
+    "order": 6,
+    "subquestions": [
+      {
+        "id": "childhood_neg_1",
+        "text": "From those earlier years, is there also a memory that was painful, frightening, or hard — something that left a mark? I understand this may be sensitive, so please only share what you're comfortable with.",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "childhood_neg_1_1",
+            "text": "What do you remember about what happened, and how old were you?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "childhood_neg_1_2",
+            "text": "What emotions were you experiencing during that time?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "childhood_neg_1_3",
+            "text": "Looking back now, how do you understand that experience? Has it shaped you in ways you can identify?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "childhood_neg_1_3_1",
+                "text": "Did anyone help you through it, or did you mostly find your own way?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Important Adult Experience",
+    "order": 7,
+    "subquestions": [
+      {
+        "id": "adult_1",
+        "text": "Moving into your adult years — is there a scene or experience that feels especially meaningful or representative of who you've become? It could be from work, relationships, a challenge you faced, or something more personal.",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "adult_1_1",
+            "text": "Can you walk me through what happened — who was there and what the circumstances were?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "adult_1_2",
+            "text": "What were you thinking and feeling as it unfolded?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "adult_1_3",
+            "text": "Why does this moment feel significant to you in the context of your larger story?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "adult_1_3_1",
+                "text": "How did it affect the direction you took afterward?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Challenge or Adversity",
+    "order": 8,
+    "subquestions": [
+      {
+        "id": "challenge_1",
+        "text": "Life often involves facing challenges that test us in important ways. Is there a particular challenge, obstacle, or adversity — maybe something ongoing — that you feel has really shaped your story?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "challenge_1_1",
+            "text": "Can you describe what the challenge is or was, and how long it has been part of your life?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "challenge_1_2",
+            "text": "How have you tried to cope with it or work through it?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "challenge_1_3",
+            "text": "What has this challenge taught you, or how has it changed you?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "challenge_1_3_1",
+                "text": "Do you feel it has made you stronger, or has the impact been more complicated than that?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Meaningful Relationship",
+    "order": 9,
+    "subquestions": [
+      {
+        "id": "relationship_1",
+        "text": "Thinking about the relationships in your life — are there one or two that have been especially formative or meaningful? This could be a friendship, a family relationship, a mentor, a partner, anyone who has played a significant role in your story.",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "relationship_1_1",
+            "text": "Can you tell me a bit about who this person is and how they came into your life?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "relationship_1_2",
+            "text": "What has made this relationship feel so meaningful or formative?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "relationship_1_3",
+            "text": "Is there a specific memory or moment with this person that captures what the relationship means to you?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "relationship_1_3_1",
+                "text": "How has knowing this person shaped the kind of person you are?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Personal Beliefs and Values",
+    "order": 10,
+    "subquestions": [
+      {
+        "id": "values_1",
+        "text": "I'd like to ask about your beliefs and values — the things that feel most central to who you are and how you try to live. What would you say are your core values or beliefs?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "values_1_1",
+            "text": "How did you come to hold these values — were they something you grew up with, or did they develop over time through your experiences?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "values_1_2",
+            "text": "Has there been a time when your values were tested or when you had to really stand by them?",
+            "order": 2,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "values_1_2_1",
+                "text": "What did that experience reveal to you about yourself?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          },
+          {
+            "id": "values_1_3",
+            "text": "Are there beliefs you once held that have changed significantly over the course of your life?",
+            "order": 3,
+            "probe_group": "sub2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Future Chapter",
+    "order": 11,
+    "subquestions": [
+      {
+        "id": "future_1",
+        "text": "As we begin to look toward the end of our conversation, I'd like to ask you to imagine the next chapter of your story. What do you see as the next phase of your life — what do you hope for, or what feels like it's still unwritten?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "future_1_1",
+            "text": "What events or milestones do you anticipate, or hope for, in this next chapter?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "future_1_2",
+            "text": "Are there goals, dreams, or things you still want to accomplish or experience?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "future_1_3",
+            "text": "What do you think will be the main challenges in this next chapter?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "future_1_3_1",
+                "text": "What do you draw on from your past — from everything you've told me today — to face what's ahead?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Life Theme",
+    "order": 12,
+    "subquestions": [
+      {
+        "id": "theme_1",
+        "text": "As we near the end of our conversation, I'd like to step back and look at your life as a whole. If you had to identify a central theme — a thread or pattern that seems to run through your story — what would it be?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "theme_1_1",
+            "text": "Can you point to moments in your story that really illustrate this theme?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "theme_1_2",
+            "text": "Do you feel this theme has been something you chose, or something that seems to have found you?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "theme_1_3",
+            "text": "Is there anything you feel the story of your life is still trying to say — something not yet resolved or expressed?",
+            "order": 3,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "theme_1_3_1",
+                "text": "How do you hope the story continues from here?",
+                "order": 1,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
