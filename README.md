@@ -1,6 +1,6 @@
 # SparkMeLive — AVP Interview MVP
 
-A full-stack web application for conducting AVP (Autobiographical Verbal Protocol) life-story interviews. Built for internal testing by the Stanford SALT Lab research team, targeting the May 29 evaluation deadline.
+A full-stack web application for conducting AVP (Autobiographical Verbal Protocol) life-story interviews. A full-stack web application for conducting AVP (Autobiographical Verbal Protocol) life-story interviews. Built for internal testing by the Stanford CPI and SALT Lab research teams.
 
 **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase (Auth + Postgres + Storage) · OpenAI-compatible LLM API · Deployable to Vercel
 
