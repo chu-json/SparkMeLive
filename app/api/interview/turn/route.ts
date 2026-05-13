@@ -8,17 +8,22 @@
 //   1. Validate request + interview state
 //   2. Save interviewee turn to DB
 //   3. Load full transcript history
-//   4. Build LLM context and generate next question
-//   5. Save interviewer turn to DB
+//   4. Load or initialise agent_state (portrait + coverage + strategic questions)
+//   5. Run SparkMe 3-agent pipeline (Agenda Manager → Planner → Interviewer)
 //   6. Check for completion
-//   7. Return new turns + completion flag
+//   7. Save interviewer turn + updated agent_state to DB
+//   8. Return new turns + completion flag
 // =============================================================================
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { generateInterviewerResponse, shouldCompleteInterview } from "@/lib/interview/engine";
+import {
+  generateInterviewerResponse,
+  shouldCompleteInterview,
+  initAgentState,
+} from "@/lib/interview/engine";
 import avpProtocol from "@/lib/config/avp-protocol.json";
-import type { TranscriptTurn } from "@/lib/types";
+import type { TranscriptTurn, AgentState } from "@/lib/types";
 import type { Protocol } from "@/lib/config/protocol";
 
 export async function POST(req: NextRequest) {
@@ -36,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceClient();
 
-    // ---- 1. Load interview and verify it's active ----
+    // ── 1. Load interview and verify it's active ────────────────────────────
     const { data: interview, error: iError } = await supabase
       .from("interviews")
       .select("*")
@@ -51,19 +56,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Interview is already completed" }, { status: 409 });
     }
 
-    // ---- 2. Get current turn count ----
+    // ── 2. Get current turn count ───────────────────────────────────────────
     const { count } = await supabase
       .from("transcript_turns")
       .select("*", { count: "exact", head: true })
       .eq("interview_id", interviewId);
 
-    const nextTurnIndex = (count ?? 0);
-    const intervieweeTurnIndex = nextTurnIndex;
-    const interviewerTurnIndex = nextTurnIndex + 1;
-
+    const intervieweeTurnIndex = count ?? 0;
+    const interviewerTurnIndex = intervieweeTurnIndex + 1;
     const now = new Date().toISOString();
 
-    // ---- 3. Save interviewee turn ----
+    // ── 3. Save interviewee turn ────────────────────────────────────────────
     const { data: intervieweeTurn, error: itError } = await supabase
       .from("transcript_turns")
       .insert({
@@ -82,7 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to save response" }, { status: 500 });
     }
 
-    // ---- 4. Load full history ----
+    // ── 4. Load full history ────────────────────────────────────────────────
     const { data: history, error: histError } = await supabase
       .from("transcript_turns")
       .select("*")
@@ -94,10 +97,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to load interview history" }, { status: 500 });
     }
 
-    // ---- 5. Check for completion before calling LLM ----
-    const isComplete = shouldCompleteInterview(history as TranscriptTurn[], text);
+    // ── 5. Load or initialise agent state ───────────────────────────────────
+    const currentState: AgentState =
+      interview.agent_state ?? initAgentState(avpProtocol as Protocol);
+
+    // ── 6. Check for completion before calling agents ────────────────────────
+    const isComplete = shouldCompleteInterview(
+      history as TranscriptTurn[],
+      text,
+      currentState
+    );
 
     let interviewerQuestion: string;
+    let updatedState: AgentState = currentState;
 
     if (isComplete) {
       interviewerQuestion =
@@ -105,17 +117,28 @@ export async function POST(req: NextRequest) {
         "This has been a meaningful conversation, and I'm grateful for your time and openness. " +
         "The interview is now complete. You can download your transcript below.";
     } else {
-      // ---- 6. Generate next question ----
+      // ── 7. Find the last interviewer question for the Agenda Manager ────────
+      // We need it to give the memory agent context on what was being asked.
+      const lastInterviewerTurn = [...(history as TranscriptTurn[])]
+        .reverse()
+        .find((t) => t.speaker === "interviewer");
+      const latestQuestion = lastInterviewerTurn?.text ?? "";
+
+      // ── 8. Run SparkMe 3-agent pipeline ─────────────────────────────────────
       const result = await generateInterviewerResponse(
+        latestQuestion,
+        text,
         history as TranscriptTurn[],
-        avpProtocol as Protocol
+        avpProtocol as Protocol,
+        currentState
       );
-      interviewerQuestion = result.question;
+      interviewerQuestion = result.output.question;
+      updatedState = result.updatedState;
     }
 
     const questionNow = new Date().toISOString();
 
-    // ---- 7. Save interviewer turn ----
+    // ── 9. Save interviewer turn ────────────────────────────────────────────
     const { data: interviewerTurn, error: interviewerError } = await supabase
       .from("transcript_turns")
       .insert({
@@ -134,13 +157,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to save question" }, { status: 500 });
     }
 
-    // ---- 8. Mark interview complete if needed ----
+    // ── 10. Persist updated agent state + handle completion ─────────────────
+    const interviewUpdate: Record<string, unknown> = { agent_state: updatedState };
     if (isComplete) {
-      await supabase
-        .from("interviews")
-        .update({ completed: true, ended_at: new Date().toISOString() })
-        .eq("id", interviewId);
+      interviewUpdate.completed = true;
+      interviewUpdate.ended_at = new Date().toISOString();
     }
+
+    await supabase.from("interviews").update(interviewUpdate).eq("id", interviewId);
 
     return NextResponse.json({
       interviewee_turn: intervieweeTurn,

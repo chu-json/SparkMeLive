@@ -30,6 +30,8 @@ export function AdminContent({
   const [newStudyId, setNewStudyId] = useState("TEST001");
   const [creating, setCreating] = useState(false);
   const [createResult, setCreateResult] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportUrls, setExportUrls] = useState<Record<string, { json?: string; txt?: string }>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -69,8 +71,48 @@ export function AdminContent({
     }
   };
 
+  const handleSeedTestParticipants = async () => {
+    setSeeding(true);
+    setSeedResult(null);
+    const ids = Array.from({ length: 10 }, (_, i) => `TEST${String(i + 1).padStart(3, "0")}`);
+    let created = 0;
+    let skipped = 0;
+
+    for (const id of ids) {
+      try {
+        const res = await fetch("/api/admin/participant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ study_id: id }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setSeedResult(`Error creating ${id}: ${data.error}`);
+          setSeeding(false);
+          return;
+        }
+        if (data.created) {
+          created++;
+          setParticipants((prev) => [data.participant, ...prev]);
+        } else {
+          skipped++;
+        }
+      } catch {
+        setSeedResult("Request failed — is the dev server running?");
+        setSeeding(false);
+        return;
+      }
+    }
+
+    setSeedResult(
+      created > 0
+        ? `Created ${created} participant${created !== 1 ? "s" : ""}${skipped > 0 ? `, ${skipped} already existed` : ""}.`
+        : `All ${skipped} participants already exist.`
+    );
+    setSeeding(false);
+  };
+
   const handleGenerateExport = async (interviewId: string) => {
-    setExportingId(interviewId);
     setErrors((prev) => ({ ...prev, [interviewId]: "" }));
 
     try {
@@ -224,14 +266,34 @@ export function AdminContent({
               >
                 Create
               </Button>
+
+              {/* Divider */}
+              <div className="h-8 w-px bg-stone-200 mx-1" />
+
+              {/* Bulk seed shortcut */}
+              <div className="flex flex-col gap-1">
+                <Button
+                  size="md"
+                  variant="secondary"
+                  loading={seeding}
+                  onClick={handleSeedTestParticipants}
+                >
+                  {seeding ? "Creating…" : "Seed TEST001–TEST010"}
+                </Button>
+                <p className="text-[11px] text-stone-400">
+                  Creates 10 test IDs at once (idempotent)
+                </p>
+              </div>
             </div>
+
             {createResult && (
-              <p
-                className={`mt-3 text-sm ${
-                  createResult.startsWith("Error") ? "text-red-600" : "text-emerald-600"
-                }`}
-              >
+              <p className={`mt-3 text-sm ${createResult.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
                 {createResult}
+              </p>
+            )}
+            {seedResult && (
+              <p className={`mt-3 text-sm ${seedResult.startsWith("Error") ? "text-red-600" : "text-emerald-600"}`}>
+                {seedResult}
               </p>
             )}
           </div>

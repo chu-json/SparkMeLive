@@ -129,5 +129,61 @@ export interface GenerateQuestionOutput {
   reasoning?: string;
 }
 
+// ---- SparkMe agent state types -----------------------------------------------
+
+/**
+ * Per-probe coverage state maintained by the Agenda Manager.
+ * Tracked for every sub1 and sub2 probe in the AVP protocol.
+ */
+export interface SubtopicState {
+  /** Running notes accumulated across turns */
+  notes: string[];
+  /** True when the probe has been sufficiently explored */
+  isCovered: boolean;
+  /** Synthesized summary written when isCovered becomes true */
+  aggregatedNotes: string;
+}
+
+/**
+ * Flexible participant portrait maintained by the Agenda Manager.
+ * Each key is a discovered dimension (e.g. "background", "key_themes").
+ */
+export type UserPortrait = Record<string, string>;
+
+/**
+ * A strategic question produced by the Exploration Planner.
+ * Priority 1–10 based on U = α·Coverage − β·Cost + γ·Emergence.
+ */
+export interface StrategicQuestion {
+  /** The interviewer question text */
+  content: string;
+  /** Protocol probe id this question targets */
+  probe_id: string;
+  /** Whether this fills a coverage gap or explores an emergent insight */
+  strategy_type: "coverage_gap" | "emergent_insight";
+  /** Strategic importance 1–10 */
+  priority: number;
+  /** Plain-language reasoning for this question's priority */
+  reasoning: string;
+}
+
+/**
+ * Full per-interview state for the SparkMe 3-agent pipeline.
+ * Stored as agent_state jsonb in the interviews table and updated after
+ * each interviewee turn.
+ */
+export interface AgentState {
+  /** Running participant portrait (key → value facts) */
+  portrait: UserPortrait;
+  /** Per-probe coverage: keyed by probe id from avp-protocol.json */
+  coverage: Record<string, SubtopicState>;
+  /** Rolling summary of what has been covered — used as LAST_MEETING_SUMMARY */
+  sessionSummary: string;
+  /** Last set of strategic questions from the Exploration Planner */
+  strategicQuestions: StrategicQuestion[];
+  /** Turn index of the last agent state update */
+  lastUpdatedTurn: number;
+}
+
 // ---- Protocol types ---------------------------------------------------------
 // See lib/config/protocol.ts for full protocol schema types

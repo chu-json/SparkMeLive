@@ -77,6 +77,26 @@ function getProvider(): LLMProvider {
 }
 
 // ---------------------------------------------------------------------------
+// General-purpose LLM call — used by agent sub-modules (memory, planner)
+// ---------------------------------------------------------------------------
+
+/**
+ * Make a raw LLM call and return the response text.
+ * Used by the Agenda Manager and Exploration Planner agents.
+ *
+ * @param messages   Ordered list of system/user/assistant messages
+ * @param maxTokens  Token budget for the response (default 1200)
+ * @param temperature Sampling temperature (default 0.3 for structured JSON tasks)
+ */
+export async function callLLM(
+  messages: LLMMessage[],
+  maxTokens = 1200,
+  temperature = 0.3
+): Promise<string> {
+  return getProvider().complete(messages, { maxTokens, temperature });
+}
+
+// ---------------------------------------------------------------------------
 // Main export: generateNextQuestion
 // ---------------------------------------------------------------------------
 

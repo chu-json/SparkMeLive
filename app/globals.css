@@ -18,3 +18,121 @@ body {
   background-color: #fafaf9;
   color: #1c1917;
 }
+
+/* ============================================================
+   Voice Interview UI — Orb & Animation System
+   ============================================================ */
+
+/* Orb rings — expand outward and fade, driven by --ring-duration CSS var */
+.orb-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--ring-color, #818cf8);
+  animation: orb-ring-expand var(--ring-duration, 2.8s) ease-out infinite;
+  pointer-events: none;
+}
+
+.orb-ring-1 { animation-delay: 0s; }
+.orb-ring-2 { animation-delay: calc(var(--ring-duration, 2.8s) * 0.33); }
+.orb-ring-3 { animation-delay: calc(var(--ring-duration, 2.8s) * 0.66); }
+
+@keyframes orb-ring-expand {
+  0%   { transform: scale(1);    opacity: 0.55; }
+  70%  { opacity: 0.08; }
+  100% { transform: scale(1.95); opacity: 0; }
+}
+
+/* Orb body animations — different keyframes per state */
+.orb-idle      { animation: orb-breathe   3.2s ease-in-out  infinite; }
+.orb-thinking  { animation: orb-think     2.1s ease-in-out  infinite; }
+.orb-listening { animation: orb-listen    1.4s ease-in-out  infinite; }
+.orb-speaking  { animation: orb-speak     1.7s ease-in-out  infinite; }
+
+@keyframes orb-breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.045); }
+}
+
+@keyframes orb-think {
+  0%, 100% { transform: scale(0.97); filter: brightness(0.88); }
+  50%       { transform: scale(1.04); filter: brightness(1.22); }
+}
+
+@keyframes orb-listen {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.07); }
+}
+
+@keyframes orb-speak {
+  0%   { transform: scale(1);    }
+  12%  { transform: scale(1.065); }
+  28%  { transform: scale(0.968); }
+  46%  { transform: scale(1.055); }
+  65%  { transform: scale(0.975); }
+  82%  { transform: scale(1.04);  }
+  100% { transform: scale(1);    }
+}
+
+/* Ambient glow pulse behind the orb */
+.orb-glow {
+  animation: glow-pulse var(--ring-duration, 2.8s) ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(1); }
+  50%       { opacity: 0.28; transform: scale(1.06); }
+}
+
+/* Typewriter cursor blink */
+.caption-cursor::after {
+  content: '▋';
+  font-size: 0.85em;
+  animation: cursor-blink 0.9s step-end infinite;
+  margin-left: 1px;
+  opacity: 0.7;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 0.7; }
+  50%       { opacity: 0; }
+}
+
+/* Transcript drawer slide-in from right */
+.transcript-drawer {
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.transcript-drawer-closed {
+  transform: translateX(100%);
+}
+.transcript-drawer-open {
+  transform: translateX(0);
+}
+
+/* Text input slide-up panel */
+.text-input-panel {
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+              opacity  0.28s ease;
+}
+.text-input-hidden {
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.text-input-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Recording mic button pulse ring */
+@keyframes mic-pulse {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(1.8); opacity: 0;   }
+}
+
+.mic-pulse-ring {
+  animation: mic-pulse 1.2s ease-out infinite;
+}
