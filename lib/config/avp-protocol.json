@@ -1,44 +1,74 @@
 [
   {
-    "topic": "Peak Experience",
+    "topic": "Life History",
     "order": 1,
     "subquestions": [
       {
-        "id": "peak_1",
-        "text": "I'd like to begin by asking you to think about your life as a whole and identify what might be called a peak experience — a moment that stands out as especially vivid, meaningful, or positive. Can you tell me about that experience?",
+        "id": "lh_1",
+        "text": "I'd like to begin with a big question: tell me the story of your life.\n\n[PROBE ONLY IF NECESSARY] \"Start from the beginning.\" OR \"I want to know the whole story, but let's start with chapter one.\"",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "peak_1_1",
-            "text": "Where and when did this take place?",
+            "id": "lh_1_a",
+            "text": "Childhood",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "peak_1_2",
-            "text": "Who else was involved in this moment?",
+            "id": "lh_1_b",
+            "text": "Education",
             "order": 2,
             "probe_group": "sub2"
           },
           {
-            "id": "peak_1_3",
-            "text": "What were you thinking and feeling at the time?",
+            "id": "lh_1_c",
+            "text": "Family and Relationships",
             "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "peak_1_3_1",
-                "text": "How did those feelings affect you afterward — did anything shift in how you saw yourself or your life?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
           },
           {
-            "id": "peak_1_4",
-            "text": "Why do you think this particular moment stands out for you? What does it say about who you are?",
+            "id": "lh_1_d",
+            "text": "Major life events",
             "order": 4,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "lh_2",
+        "text": "Some people tell us about turning points they've experienced in life, moments when something shifted the direction of their life, whether or not they chose for it to happen. Have you experienced turning points?",
+        "order": 2,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "lh_2_a",
+            "text": "Tell me the whole story about that from start to finish.",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "lh_2_b",
+            "text": "Some people tell us they made a conscious choice or decision in moments like these, others say it \"just happened\" without much thought on their part. What about for you?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "lh_2_c",
+            "text": "Could a person or organization have lent a helping hand at this critical moment that would have changed everything?",
+            "order": 3,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "lh_2_d",
+            "text": "I notice you focused on a very recent/early turning point. Are there any other turning points that happened earlier/later in your life?",
+            "order": 4,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "lh_2_e",
+            "text": "I notice you focused on a turning point that had pretty good/bad effects? Can you think of one that had bad/good effects?",
+            "order": 5,
             "probe_group": "sub2"
           }
         ]
@@ -46,44 +76,184 @@
     ]
   },
   {
-    "topic": "Low Point",
+    "topic": "Family",
     "order": 2,
     "subquestions": [
       {
-        "id": "low_1",
-        "text": "Now I'd like to ask about the opposite — a low point, a time that was especially difficult, painful, or challenging. This doesn't have to be the very worst moment, just one that comes to mind as a low point in your story. Can you describe what happened?",
+        "id": "fam_3",
+        "text": "[MOVING TO PRESENT TIME] Tell me more about family or friends who are important to you.",
         "order": 1,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "fam_4",
+        "text": "Tell me about everyone in your immediate family.",
+        "order": 2,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "low_1_1",
-            "text": "When and where did this occur?",
+            "id": "fam_4_a",
+            "text": "[IF APPLICABLE] How would you describe your relationship with [PARTNER]?",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "low_1_2",
-            "text": "Who else was part of this experience?",
+            "id": "fam_4_b",
+            "text": "[IF APPLICABLE] Tell me the whole story of how you met [PARTNER'S NAME].",
+            "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "fam_5",
+        "text": "Tell me about anyone who was part of your immediate family but isn't now. [IF APPLICABLE] Tell me the whole story of your divorce/separation.",
+        "order": 3,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "fam_6",
+        "text": "[IF PARENT OF MINOR CHILD] I'd love to learn more about your children. Tell me about [CHILD'S NAME]. [REPEAT FOR EACH CHILD]",
+        "order": 4,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "fam_6_a",
+            "text": "Tell me about where s/he stays besides with you.",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "fam_7",
+        "text": "[IF APPLICABLE AND NOT ALREADY ANSWERED] Tell me about anyone else in your life we haven't discussed, like a romantic partner.",
+        "order": 5,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "fam_7_a",
+            "text": "What is her/his living situation?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "fam_7_b",
+            "text": "Do you share children?",
             "order": 2,
             "probe_group": "sub2"
           },
           {
-            "id": "low_1_3",
-            "text": "What were you feeling in the midst of it?",
+            "id": "fam_7_c",
+            "text": "Does s/he have any other children?",
             "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "low_1_3_1",
-                "text": "How did you find your way through it — or are you still finding your way?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "topic": "Work",
+    "order": 3,
+    "subquestions": [
+      {
+        "id": "work_8",
+        "text": "Tell me about your work life right now. What kind of work do you do, and what does a typical day or week look like?",
+        "order": 1,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "work_8_a",
+            "text": "[IF ONE JOB] How many hours do you work, and does the pay feel fair for the work you do? Has that changed over time?",
+            "order": 1,
+            "probe_group": "sub2"
           },
           {
-            "id": "low_1_4",
-            "text": "Looking back, what impact did this low point have on you — on your sense of self, your values, or your path forward?",
+            "id": "work_8_b",
+            "text": "[IF MULTIPLE JOBS] How do the hours add up across all your work, and how does the pay break down? Does that feel like a fair return for everything you are putting in?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_8_c",
+            "text": "How predictable is your schedule, and do you have much say over your hours?",
+            "order": 3,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_8_d",
+            "text": "When personal or family matters come up, how easy or hard is it to handle those without your work being affected?",
+            "order": 4,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_8_e",
+            "text": "How do you feel about the people you work with and for: managers, coworkers, customers?",
+            "order": 5,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "work_9",
+        "text": "How much does this work feel like part of who you are? Is it something you find meaningful in itself, or is it more how you make ends meet?",
+        "order": 2,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "work_10",
+        "text": "Walk me through the main work you've done over the course of your working life. How did you get to where you are now?",
+        "order": 3,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "work_10_a",
+            "text": "Were there turning points, moments where things shifted in a significant direction?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_10_b",
+            "text": "Were there people, a mentor, a family member, a teacher, who had a significant impact on the path you took?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_10_c",
+            "text": "do you hope to continue this work in the future or do you hope to evolve to a new type of work or position?",
+            "order": 3,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "work_11",
+        "text": "Tell me about how work fits into your household more broadly. Who works, what kind of work, and how does everyone's situation fit together?",
+        "order": 4,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "work_11_a",
+            "text": "Has anyone in your household lost work, had hours cut, or had a significant change in their employment situation in the past year?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_11_b",
+            "text": "[IF APPLICABLE] Tell me about the work [PARTNER/SPOUSE] does. How many hours, and what does that work look like day to day?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_11_c",
+            "text": "Are there other ways people in your household bring in money, side work, informal arrangements, anything like that?",
+            "order": 3,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "work_11_d",
+            "text": "Have you ever needed to reconcile differences in financial approaches among family members? How do you communicate about finances?",
             "order": 4,
             "probe_group": "sub2"
           }
@@ -92,402 +262,644 @@
     ]
   },
   {
-    "topic": "Turning Point",
-    "order": 3,
-    "subquestions": [
-      {
-        "id": "turning_1",
-        "text": "Many people can identify a turning point — a moment or period when something important shifted in who they are, what they value, or the direction their life took. Does anything come to mind as a turning point in your own story?",
-        "order": 1,
-        "probe_group": "sub1",
-        "children": [
-          {
-            "id": "turning_1_1",
-            "text": "Can you describe what happened — the circumstances leading up to it and what actually changed?",
-            "order": 1,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "turning_1_2",
-            "text": "Why do you see this as a turning point rather than just a significant event?",
-            "order": 2,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "turning_1_3",
-            "text": "How did this change ripple forward into later chapters of your life?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "turning_1_3_1",
-                "text": "Is there a 'before and after' quality to your sense of yourself — do you feel like a different person on the other side of it?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "topic": "Earliest Memory",
+    "topic": "Neighborhoods and Social Groups",
     "order": 4,
     "subquestions": [
       {
-        "id": "early_1",
-        "text": "I'd like to go back to the beginning of your story. What is one of your earliest memories — something from childhood that has stayed with you? It doesn't need to be dramatic; it can be something small and vivid.",
+        "id": "nbhd_12",
+        "text": "Now let's talk about your neighborhood. Tell me all about your neighborhood [OR IF \"NEIGHBORHOOD\" IS NOT THE CORRECT TERM] the area in which you are living now.",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "early_1_1",
-            "text": "How old were you, roughly, and what do you remember about the setting?",
+            "id": "nbhd_12_a",
+            "text": "Some people say they feel really safe in their neighborhoods, others not so much. How about for you?",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "early_1_2",
-            "text": "What stands out most vividly in your memory of it?",
+            "id": "nbhd_12_b",
+            "text": "Do you socialize a lot with people in your neighborhood?",
             "order": 2,
             "probe_group": "sub2"
-          },
+          }
+        ]
+      },
+      {
+        "id": "nbhd_13",
+        "text": "Do you hang out with groups outside of your neighborhood or workplace? Do you sometimes go to clubs, bars, or other places to meet up with friends?",
+        "order": 2,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "nbhd_14",
+        "text": "How about church? Do you go to church frequently?",
+        "order": 3,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "nbhd_15",
+        "text": "Is religion or spirituality important in your life? Some people say it is, but others say not so much. How about you?",
+        "order": 4,
+        "probe_group": "sub1",
+        "children": [
           {
-            "id": "early_1_3",
-            "text": "What do you make of this memory now, looking back? Why do you think it has stayed with you?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "early_1_3_1",
-                "text": "Does this memory feel connected to anything important about who you became?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "id": "nbhd_15_a",
+            "text": "Tell me a story about a time when religion or spirituality was really important for you or your family.",
+            "order": 1,
+            "probe_group": "sub2"
           }
         ]
       }
     ]
   },
   {
-    "topic": "Positive Childhood Memory",
+    "topic": "Finances — Expenses",
     "order": 5,
     "subquestions": [
       {
-        "id": "childhood_pos_1",
-        "text": "Staying with your earlier years — can you share a particularly happy or positive memory from childhood or adolescence? A moment that left a warm impression.",
+        "id": "fin_exp_16",
+        "text": "Now we'd like to talk more about how you handle expenses and make ends meet. Let's start with your biggest expenses last month.",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "childhood_pos_1_1",
-            "text": "Who was part of this memory, and what made it feel so good?",
+            "id": "fin_exp_16_a",
+            "text": "[housing] About how much did your household spend on housing costs and utilities last month — rent or mortgage, utilities, plus insurance and property taxes if you pay those? Is that the usual amount?",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "childhood_pos_1_2",
-            "text": "What were you thinking and feeling at the time?",
+            "id": "fin_exp_16_b",
+            "text": "[health] About how much did you spend on health-related costs last month — insurance premiums, copays, prescriptions, anything like that? Is that typical?",
             "order": 2,
             "probe_group": "sub2"
           },
           {
-            "id": "childhood_pos_1_3",
-            "text": "Why do you think this memory has stayed with you? What significance does it hold in your story?",
+            "id": "fin_exp_16_c",
+            "text": "[food] About how much did your household spend on food last month — groceries plus eating out? Is that the usual amount?",
             "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "childhood_pos_1_3_1",
-                "text": "Does it connect to something you've continued to value or pursue in your life since then?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
+          },
+          {
+            "id": "fin_exp_16_d",
+            "text": "[other] Were there any other big expenses last month — transportation, education, child care, anything else that made a big impact? About how much?",
+            "order": 4,
+            "probe_group": "sub2"
           }
         ]
+      },
+      {
+        "id": "fin_exp_17",
+        "text": "People tell us they cope in all kinds of ways to make ends meet, finding ways to cut corners, going without things, leaning on others. How about for you?",
+        "order": 2,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "fin_exp_17_a",
+            "text": "Has anything about how you cope changed recently, compared to a year or two ago?",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "fin_exp_18",
+        "text": "Tell me about any time in the past year when there wasn't enough money to cover something you needed or pay a bill that was due. Tell me the whole story of how you got through it.",
+        "order": 3,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "fin_exp_18_a",
+            "text": "Has that kind of situation come up more than once this past year? Tell me about how it tends to go.",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "fin_exp_19",
+        "text": "Stepping back, has the overall picture gotten easier, harder, or stayed about the same compared to a few year ago?",
+        "order": 4,
+        "probe_group": "sub1"
       }
     ]
   },
   {
-    "topic": "Negative or Difficult Childhood Memory",
+    "topic": "Finances — Savings and Debt",
     "order": 6,
     "subquestions": [
       {
-        "id": "childhood_neg_1",
-        "text": "From those earlier years, is there also a memory that was painful, frightening, or hard — something that left a mark? I understand this may be sensitive, so please only share what you're comfortable with.",
+        "id": "fin_sav_20",
+        "text": "Some people save regularly, some save when they can, some put money aside in informal ways (e.g., a jar, giving it to a family member to hold), and some say saving just isn't possible right now. Where do you fall?",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "childhood_neg_1_1",
-            "text": "What do you remember about what happened, and how old were you?",
+            "id": "fin_sav_20_a",
+            "text": "Tell me the whole story of how you've managed to save over the past year.",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "childhood_neg_1_2",
-            "text": "What emotions were you experiencing during that time?",
+            "id": "fin_sav_20_b",
+            "text": "When you do manage to save, what do you save for?",
             "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "fin_sav_21",
+        "text": "There are a lot of ways people handle everyday finances these days: traditional banks, credit unions, apps like Cash App or Venmo, prepaid cards, check-cashing places. How about you?",
+        "order": 2,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "fin_sav_22",
+        "text": "Some people have debt they're managing like student loans, credit cards, car payments, medical bills, money owed to family or friends. Others don't. Tell me about where you stand with that.",
+        "order": 3,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "fin_sav_22_a",
+            "text": "Has keeping up with any of it been a struggle? Is there debt you've had to let slide or work out some other way?",
+            "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "childhood_neg_1_3",
-            "text": "Looking back now, how do you understand that experience? Has it shaped you in ways you can identify?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "childhood_neg_1_3_1",
-                "text": "Did anyone help you through it, or did you mostly find your own way?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "id": "fin_sav_22_b",
+            "text": "Has anything shifted recently in how you're dealing with debt? For example, have you paid off a significant portion of debt or taken on new debt?",
+            "order": 2,
+            "probe_group": "sub2"
           }
         ]
+      },
+      {
+        "id": "fin_sav_23",
+        "text": "Some individuals invest, even small amounts in the stock market, bitcoin or private businesses. How about you?",
+        "order": 4,
+        "probe_group": "sub1"
       }
     ]
   },
   {
-    "topic": "Important Adult Experience",
+    "topic": "Finances — Resources Beyond Employment",
     "order": 7,
     "subquestions": [
       {
-        "id": "adult_1",
-        "text": "Moving into your adult years — is there a scene or experience that feels especially meaningful or representative of who you've become? It could be from work, relationships, a challenge you faced, or something more personal.",
+        "id": "fin_res_24",
+        "text": "How much do you rely on government programs, like food stamps, tax credits, and the like?",
         "order": 1,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "fin_res_25",
+        "text": "[If person get's money from the government] Some people have told us that it is really hard to deal with these programs. Others haven't had any difficulties at all. How about for you?",
+        "order": 2,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "adult_1_1",
-            "text": "Can you walk me through what happened — who was there and what the circumstances were?",
+            "id": "fin_res_25_a",
+            "text": "Tell me the whole story about those problems from start to finish.",
             "order": 1,
             "probe_group": "sub2"
-          },
-          {
-            "id": "adult_1_2",
-            "text": "What were you thinking and feeling as it unfolded?",
-            "order": 2,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "adult_1_3",
-            "text": "Why does this moment feel significant to you in the context of your larger story?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "adult_1_3_1",
-                "text": "How did it affect the direction you took afterward?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
           }
         ]
+      },
+      {
+        "id": "fin_res_26",
+        "text": "Some individuals share that they receive financial support from family members and friends. How about you?",
+        "order": 3,
+        "probe_group": "sub1"
       }
     ]
   },
   {
-    "topic": "Challenge or Adversity",
+    "topic": "Health and Health Care",
     "order": 8,
     "subquestions": [
       {
-        "id": "challenge_1",
-        "text": "Life often involves facing challenges that test us in important ways. Is there a particular challenge, obstacle, or adversity — maybe something ongoing — that you feel has really shaped your story?",
+        "id": "hlth_27",
+        "text": "Now we'd like to learn more about your health and the health of others in your household. First, tell me all about your health.",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "challenge_1_1",
-            "text": "Can you describe what the challenge is or was, and how long it has been part of your life?",
+            "id": "hlth_27_a",
+            "text": "For you, what makes it easy or hard to stay healthy?",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_28",
+        "text": "Tell me about anything big that has happened in the past two years related to your health: any medical diagnoses, flare-ups of chronic conditions, broken bones, pain – anything like that.",
+        "order": 2,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_28_a",
+            "text": "Tell the whole story of what led up to that incident.",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "challenge_1_2",
-            "text": "How have you tried to cope with it or work through it?",
+            "id": "hlth_28_b",
+            "text": "Was it serious enough to have to get medical advice or treatment?",
             "order": 2,
             "probe_group": "sub2"
           },
           {
-            "id": "challenge_1_3",
-            "text": "What has this challenge taught you, or how has it changed you?",
+            "id": "hlth_28_c",
+            "text": "Can you tell me more about which family member was injured and how they were injured? [probe for relationship to interviewee, demographics of injured party and cause and severity of injury]",
             "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "challenge_1_3_1",
-                "text": "Do you feel it has made you stronger, or has the impact been more complicated than that?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_28_d",
+            "text": "Have there been any long term effects from this injury? Either physical or financial? [Probe for pain, disability, financial hardship, etc]",
+            "order": 4,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_29",
+        "text": "Sometimes, health problems get in the way. They can even affect people's ability to work or care for their children. Is that the case for you?",
+        "order": 3,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_29_a",
+            "text": "Is this a frequent or occasional challenge?",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_30",
+        "text": "Sometimes, it's not your health problem, but the health of a loved one. Has this been an issue for you?",
+        "order": 4,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_30_a",
+            "text": "Tell me the whole story about that.",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_31",
+        "text": "Tell me about any health needs you feel are not being addressed. Sometimes these aren't direct health needs like going to a doctor but maybe help doing your usual activities when you are not well or help caring for a loved one when they are not well.",
+        "order": 5,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_31_a",
+            "text": "Tell me more about that.",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_31_b",
+            "text": "Tell me more about why those needs aren't being addressed. [PROBE ACCORDINGLY ON LACK OF INSURANCE, LACK OF PROXIMITY TO CARE, LACK OF LOCAL TESTING/TREATMENT CAPACITY]",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_31_c",
+            "text": "Have you ever had to forego getting the health care you need? What about anyone in your immediate family?",
+            "order": 3,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_31_d",
+            "text": "Have you ever used alternative forms of medicine? (E.g. indigenous, non western, or informal forms of care) What about anyone in your immediate family?",
+            "order": 4,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_32",
+        "text": "Tell me, how do you pay for your health care?",
+        "order": 6,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "hlth_33",
+        "text": "What types of strategies do you use to reduce your health expenses? (e.g. some people buy their medication from a compounding pharmacy or wait to see their doctor until they feel like they can't wait any longer?)",
+        "order": 7,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "hlth_34",
+        "text": "Some people say they struggle with depression, anxiety, or something else like that. How about for you?",
+        "order": 8,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_34_a",
+            "text": "How has that been for your family?",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_35",
+        "text": "During tough times, some people tell us they cope by smoking or drinking. How about for you?",
+        "order": 9,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_35_a",
+            "text": "Tell me about the last time you coped by smoking or drinking.",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_36",
+        "text": "Other people say they cope by relying on prescriptions, pain medications, marijuana, or other substances. How about for you?",
+        "order": 10,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_36_a",
+            "text": "Tell me about the last time you coped by using medications [OR WHATEVER THEY SAID].",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_37",
+        "text": "What are some things that you or your family members do to take care of their health?",
+        "order": 11,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_37_a",
+            "text": "What are some things you've thought about doing?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_37_b",
+            "text": "Anything a friend or healthcare provider has suggested you might do to improve your health?",
+            "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_38",
+        "text": "Do you have a primary doctor that you see once a year or every few years?",
+        "order": 12,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_38_a",
+            "text": "How well do you feel that this doctor understands your healthcare needs?",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_38_b",
+            "text": "What's something that your doctor doesn't know but you think should know to better care for your health?",
+            "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "hlth_39",
+        "text": "Some people regularly get vaccines to prevent illness like the Covid-19 and flu vaccine, others not so much. How about you?",
+        "order": 13,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "hlth_39_a",
+            "text": "[IF DO NOT GET] Tell me more about why you don't get vaccines.",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_39_b",
+            "text": "[IF GET] What does getting the vaccine(s) mean for your quality of life?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "hlth_39_c",
+            "text": "What are your trusted sources of information about the vaccine(s)?",
+            "order": 3,
+            "probe_group": "sub2"
           }
         ]
       }
     ]
   },
   {
-    "topic": "Meaningful Relationship",
+    "topic": "Politics and Current Events",
     "order": 9,
     "subquestions": [
       {
-        "id": "relationship_1",
-        "text": "Thinking about the relationships in your life — are there one or two that have been especially formative or meaningful? This could be a friendship, a family relationship, a mentor, a partner, anyone who has played a significant role in your story.",
+        "id": "pol_40",
+        "text": "Some people say they vote in every election, some tell us they don't vote at all. How about you?",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "relationship_1_1",
-            "text": "Can you tell me a bit about who this person is and how they came into your life?",
+            "id": "pol_40_a",
+            "text": "What about elections in the future? Will you vote?",
+            "order": 1,
+            "probe_group": "sub2",
+            "children": [
+              {
+                "id": "pol_40_a_i",
+                "text": "[IF DIFFERENT FROM PAST] What is behind that change?",
+                "order": 1,
+                "probe_group": "sub3"
+              },
+              {
+                "id": "pol_40_a_ii",
+                "text": "[IF PLANNING TO VOTE] Who are you thinking about supporting?",
+                "order": 2,
+                "probe_group": "sub3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "pol_41",
+        "text": "Some people say they care more about local and state politics, other people say they care more about national politics, and others care about neither. How about you?",
+        "order": 2,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "pol_41_a",
+            "text": "Which do you think has a bigger impact on your day-to-day life: local, state or national politics?",
+            "order": 1,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "pol_42",
+        "text": "How would you describe your political views?",
+        "order": 3,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "pol_42_a",
+            "text": "Tell me about any recent changes in your political views.",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "relationship_1_2",
-            "text": "What has made this relationship feel so meaningful or formative?",
+            "id": "pol_42_b",
+            "text": "Tell me more about that.",
+            "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "pol_43",
+        "text": "If you could talk to someone in charge, someone who could really change things, what would you say?",
+        "order": 4,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "pol_44",
+        "text": "Do you follow current events … what's happening in the world, in the U.S., or in your local area?",
+        "order": 5,
+        "probe_group": "sub1"
+      },
+      {
+        "id": "pol_45",
+        "text": "What current events are on your mind these days?",
+        "order": 6,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "pol_45_a",
+            "text": "What do you worry about",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "pol_45_b",
+            "text": "What's going well?",
+            "order": 2,
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "pol_46",
+        "text": "The police and other law enforcement agencies have been on the news a lot lately. Some people we've talked to tell us about experiences with law enforcement. How about for you?",
+        "order": 7,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "pol_46_a",
+            "text": "Tell me a story about the last time you had an experience with law enforcement.",
+            "order": 1,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "pol_46_b",
+            "text": "What other experiences with law enforcement stand out in your mind?",
             "order": 2,
             "probe_group": "sub2"
           },
           {
-            "id": "relationship_1_3",
-            "text": "Is there a specific memory or moment with this person that captures what the relationship means to you?",
+            "id": "pol_46_c",
+            "text": "Some people tell us about experiences of arrest – of loved ones, family members, friends, or themselves. How about for you?",
             "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "relationship_1_3_1",
-                "text": "How has knowing this person shaped the kind of person you are?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
           }
         ]
       }
     ]
   },
   {
-    "topic": "Personal Beliefs and Values",
+    "topic": "Technology",
     "order": 10,
     "subquestions": [
       {
-        "id": "values_1",
-        "text": "I'd like to ask about your beliefs and values — the things that feel most central to who you are and how you try to live. What would you say are your core values or beliefs?",
+        "id": "tech_47",
+        "text": "Some people engage with social media platforms like Facebook, X, Instagram, Reddit, or YouTube. Do you use social media platforms if your day-to-day life? If so, what do you use them for?",
         "order": 1,
         "probe_group": "sub1",
         "children": [
           {
-            "id": "values_1_1",
-            "text": "How did you come to hold these values — were they something you grew up with, or did they develop over time through your experiences?",
+            "id": "tech_47_a",
+            "text": "Has the way you use social media changed in the past few years? How so?",
             "order": 1,
             "probe_group": "sub2"
           },
           {
-            "id": "values_1_2",
-            "text": "Has there been a time when your values were tested or when you had to really stand by them?",
+            "id": "tech_47_b",
+            "text": "How much time per day do you spend on social media?",
             "order": 2,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "values_1_2_1",
-                "text": "What did that experience reveal to you about yourself?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
+            "probe_group": "sub2"
+          }
+        ]
+      },
+      {
+        "id": "tech_48",
+        "text": "Do you use \"AI\" or artificial intelligence much? Tell me about how you use AI in your day-to-day life, if at all.",
+        "order": 2,
+        "probe_group": "sub1",
+        "children": [
+          {
+            "id": "tech_48_a",
+            "text": "[IF USES CHATBOT] How often do you use it, and how would you describe your relationship with it — is it more like a tool, an assistant, a companion, or something else?",
+            "order": 1,
+            "probe_group": "sub2"
           },
           {
-            "id": "values_1_3",
-            "text": "Are there beliefs you once held that have changed significantly over the course of your life?",
+            "id": "tech_48_b",
+            "text": "Do you think AI can be used to improve your health care?",
+            "order": 2,
+            "probe_group": "sub2"
+          },
+          {
+            "id": "tech_48_c",
+            "text": "Do you think AI might harm your health care?",
             "order": 3,
             "probe_group": "sub2"
           }
         ]
+      },
+      {
+        "id": "tech_49",
+        "text": "Some people think that AI might take over, that it might make warfare more dangerous, that it might eliminate jobs, or that it might be catastrophic in other ways. Other people think it's going to improve our lives in important ways. What do you think?",
+        "order": 3,
+        "probe_group": "sub1"
       }
     ]
   },
   {
-    "topic": "Future Chapter",
+    "topic": "Conclusion",
     "order": 11,
     "subquestions": [
       {
-        "id": "future_1",
-        "text": "As we begin to look toward the end of our conversation, I'd like to ask you to imagine the next chapter of your story. What do you see as the next phase of your life — what do you hope for, or what feels like it's still unwritten?",
+        "id": "conc_50",
+        "text": "We've talked about a lot of different things. Is there anything else you would like to share with me before we close?",
         "order": 1,
-        "probe_group": "sub1",
-        "children": [
-          {
-            "id": "future_1_1",
-            "text": "What events or milestones do you anticipate, or hope for, in this next chapter?",
-            "order": 1,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "future_1_2",
-            "text": "Are there goals, dreams, or things you still want to accomplish or experience?",
-            "order": 2,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "future_1_3",
-            "text": "What do you think will be the main challenges in this next chapter?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "future_1_3_1",
-                "text": "What do you draw on from your past — from everything you've told me today — to face what's ahead?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "topic": "Life Theme",
-    "order": 12,
-    "subquestions": [
-      {
-        "id": "theme_1",
-        "text": "As we near the end of our conversation, I'd like to step back and look at your life as a whole. If you had to identify a central theme — a thread or pattern that seems to run through your story — what would it be?",
-        "order": 1,
-        "probe_group": "sub1",
-        "children": [
-          {
-            "id": "theme_1_1",
-            "text": "Can you point to moments in your story that really illustrate this theme?",
-            "order": 1,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "theme_1_2",
-            "text": "Do you feel this theme has been something you chose, or something that seems to have found you?",
-            "order": 2,
-            "probe_group": "sub2"
-          },
-          {
-            "id": "theme_1_3",
-            "text": "Is there anything you feel the story of your life is still trying to say — something not yet resolved or expressed?",
-            "order": 3,
-            "probe_group": "sub2",
-            "children": [
-              {
-                "id": "theme_1_3_1",
-                "text": "How do you hope the story continues from here?",
-                "order": 1,
-                "probe_group": "sub3"
-              }
-            ]
-          }
-        ]
+        "probe_group": "sub1"
       }
     ]
   }
