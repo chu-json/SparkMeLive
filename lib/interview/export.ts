@@ -96,66 +96,76 @@ export async function generateExport(interviewId: string): Promise<ExportRespons
     },
   };
 
-  // ---- Generate file contents ----
+  // ---- Generate file contents (always succeeds) ----
   const jsonContent = JSON.stringify(exportPayload, null, 2);
   const txtContent = buildPlainTextTranscript(exportPayload);
 
-  // ---- Upload to Supabase Storage ----
+  // ---- Upload to Supabase Storage (optional — fails gracefully) ----
   const jsonPath = `${interviewId}/export.json`;
   const txtPath = `${interviewId}/export.txt`;
 
-  const { error: jsonUploadError } = await supabase.storage
-    .from("exports")
-    .upload(jsonPath, Buffer.from(jsonContent, "utf-8"), {
-      contentType: "application/json",
-      upsert: true,
-    });
+  let jsonSignedUrl = "";
+  let txtSignedUrl = "";
 
-  if (jsonUploadError) {
-    console.error("[export] json upload error:", jsonUploadError);
-    throw new Error("Failed to upload JSON export");
-  }
+  try {
+    const { error: jsonUploadError } = await supabase.storage
+      .from("exports")
+      .upload(jsonPath, Buffer.from(jsonContent, "utf-8"), {
+        contentType: "application/json",
+        upsert: true,
+      });
 
-  const { error: txtUploadError } = await supabase.storage
-    .from("exports")
-    .upload(txtPath, Buffer.from(txtContent, "utf-8"), {
-      contentType: "text/plain",
-      upsert: true,
-    });
+    if (jsonUploadError) {
+      console.warn("[export] json upload skipped:", jsonUploadError.message);
+    } else {
+      const { data: jsonSigned } = await supabase.storage
+        .from("exports")
+        .createSignedUrl(jsonPath, 3600);
+      jsonSignedUrl = jsonSigned?.signedUrl ?? "";
+    }
 
-  if (txtUploadError) {
-    console.error("[export] txt upload error:", txtUploadError);
-    throw new Error("Failed to upload TXT export");
-  }
+    const { error: txtUploadError } = await supabase.storage
+      .from("exports")
+      .upload(txtPath, Buffer.from(txtContent, "utf-8"), {
+        contentType: "text/plain",
+        upsert: true,
+      });
 
-  // ---- Record export in DB ----
-  await supabase.from("interview_exports").upsert(
-    {
+    if (txtUploadError) {
+      console.warn("[export] txt upload skipped:", txtUploadError.message);
+    } else {
+      const { data: txtSigned } = await supabase.storage
+        .from("exports")
+        .createSignedUrl(txtPath, 3600);
+      txtSignedUrl = txtSigned?.signedUrl ?? "";
+    }
+
+    // ---- Record export in DB (delete + insert avoids missing UNIQUE constraint) ----
+    await supabase
+      .from("interview_exports")
+      .delete()
+      .eq("interview_id", interviewId);
+
+    await supabase.from("interview_exports").insert({
       interview_id: interviewId,
       json_path: jsonPath,
       txt_path: txtPath,
-    },
-    { onConflict: "interview_id" }
-  );
+    });
 
-  // Update interview with transcript path
-  await supabase
-    .from("interviews")
-    .update({ transcript_path: txtPath })
-    .eq("id", interviewId);
-
-  // ---- Generate signed URLs for download ----
-  const { data: jsonSigned } = await supabase.storage
-    .from("exports")
-    .createSignedUrl(jsonPath, 3600);
-
-  const { data: txtSigned } = await supabase.storage
-    .from("exports")
-    .createSignedUrl(txtPath, 3600);
+    // Update interview with transcript path
+    await supabase
+      .from("interviews")
+      .update({ transcript_path: txtPath })
+      .eq("id", interviewId);
+  } catch (storageErr) {
+    console.warn("[export] storage/db step failed (non-fatal):", storageErr);
+  }
 
   return {
-    json_url: jsonSigned?.signedUrl ?? "",
-    txt_url: txtSigned?.signedUrl ?? "",
+    json_url: jsonSignedUrl,
+    txt_url: txtSignedUrl,
+    txt_content: txtContent,
+    json_content: jsonContent,
     export: exportPayload,
   };
 }
@@ -168,7 +178,7 @@ function buildPlainTextTranscript(payload: InterviewExportPayload): string {
   const lines: string[] = [];
 
   lines.push("=".repeat(72));
-  lines.push("AVP LIFE STORY INTERVIEW TRANSCRIPT");
+  lines.push("QUALITATIVE INTERVIEW TRANSCRIPT");
   lines.push("=".repeat(72));
   lines.push("");
   lines.push(`Study ID:      ${payload.study_id}`);

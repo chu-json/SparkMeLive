@@ -326,6 +326,61 @@ export function InterviewClient({
   }, [textInput, handleSubmit]);
 
   // ==========================================================================
+  // Export transcript (client-side, no API needed)
+  // ==========================================================================
+
+  const handleExportTranscript = useCallback(() => {
+    if (turns.length === 0) return;
+
+    const lines: string[] = [];
+    const sep72 = "=".repeat(72);
+    const sep72dash = "-".repeat(72);
+
+    lines.push(sep72);
+    lines.push("QUALITATIVE INTERVIEW TRANSCRIPT");
+    lines.push(sep72);
+    lines.push("");
+    lines.push(`Study ID:      ${studyId}`);
+    lines.push(`Interview ID:  ${interview.id}`);
+    lines.push(`Exported:      ${new Date().toLocaleString("en-US", {
+      year: "numeric", month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+    })}`);
+    lines.push(`Total turns:   ${turns.length}`);
+    lines.push("");
+    lines.push(sep72dash);
+    lines.push("TRANSCRIPT");
+    lines.push(sep72dash);
+    lines.push("");
+
+    for (const turn of turns) {
+      const speaker = turn.speaker === "interviewer" ? "INTERVIEWER" : "PARTICIPANT ";
+      const ts = turn.timestamp_start
+        ? ` [${new Date(turn.timestamp_start).toLocaleString("en-US", {
+            year: "numeric", month: "short", day: "numeric",
+            hour: "2-digit", minute: "2-digit", second: "2-digit", timeZoneName: "short",
+          })}]`
+        : "";
+      lines.push(`${speaker}${ts}`);
+      lines.push(turn.text);
+      lines.push("");
+    }
+
+    lines.push(sep72);
+    lines.push("END OF TRANSCRIPT");
+    lines.push(sep72);
+
+    const content = lines.join("\n");
+    const blob = new Blob([content], { type: "text/plain" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `transcript-${studyId}-${interview.id.slice(0, 8)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [turns, studyId, interview.id]);
+
+  // ==========================================================================
   // Derived UI values
   // ==========================================================================
 
@@ -589,8 +644,19 @@ export function InterviewClient({
           )}
         </div>
 
-        {/* Right: placeholder for visual balance */}
-        <div className="w-[52px] h-[52px]" />
+        {/* Right: export transcript */}
+        <button
+          onClick={handleExportTranscript}
+          disabled={turns.length === 0}
+          title="Download transcript"
+          className="w-[52px] h-[52px] rounded-full flex items-center justify-center
+                     border-2 border-stone-200 bg-stone-50 text-stone-500
+                     hover:text-stone-800 hover:border-stone-400 hover:bg-stone-100
+                     disabled:opacity-20 disabled:cursor-not-allowed
+                     transition-all duration-200"
+        >
+          <DownloadIcon className="w-5 h-5" />
+        </button>
       </nav>
 
       {/* ── Transcript drawer ────────────────────────────────────────────────── */}
@@ -662,6 +728,15 @@ function VolumeOffIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
       <line x1="23" y1="9" x2="17" y2="15" strokeLinecap="round" />
       <line x1="17" y1="9" x2="23" y2="15" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v13m0 0l-4-4m4 4l4-4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
     </svg>
   );
 }

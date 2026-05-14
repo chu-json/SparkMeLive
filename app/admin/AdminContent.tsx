@@ -170,8 +170,18 @@ export function AdminContent({
 
   // ── Export ───────────────────────────────────────────────────────────────────
 
-  const handleGenerateExport = async (interviewId: string) => {
-    setExportingId(interviewId);                          // ← was missing before
+  const triggerBlobDownload = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleGenerateExport = async (interviewId: string, studyId: string) => {
+    setExportingId(interviewId);
     setExportErrors((prev) => ({ ...prev, [interviewId]: "" }));
 
     try {
@@ -183,10 +193,22 @@ export function AdminContent({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Export failed");
 
-      setExportUrls((prev) => ({
-        ...prev,
-        [interviewId]: { json: data.json_url, txt: data.txt_url },
-      }));
+      // Always download directly from response content (no Storage required)
+      const slug = `${studyId}-${interviewId.slice(0, 8)}`;
+      if (data.txt_content) {
+        triggerBlobDownload(data.txt_content, `transcript-${slug}.txt`, "text/plain");
+      }
+      if (data.json_content) {
+        triggerBlobDownload(data.json_content, `transcript-${slug}.json`, "application/json");
+      }
+
+      // Store signed URLs if storage returned them (bonus)
+      if (data.txt_url || data.json_url) {
+        setExportUrls((prev) => ({
+          ...prev,
+          [interviewId]: { json: data.json_url || undefined, txt: data.txt_url || undefined },
+        }));
+      }
     } catch (err) {
       setExportErrors((prev) => ({
         ...prev,
@@ -428,12 +450,11 @@ export function AdminContent({
                     ) : (
                       <div className="divide-y divide-stone-100">
                         {pInterviews.map((interview) => {
-                          const existingExport = getExportForInterview(interview.id);
-                          const urls           = exportUrls[interview.id];
-                          const isExporting    = exportingId === interview.id;
-                          const exportError    = exportErrors[interview.id];
-                          const turns          = turnCounts[interview.id] ?? 0;
-                          const aiTurns        = Math.ceil(turns / 2);
+                          const urls        = exportUrls[interview.id];
+                          const isExporting = exportingId === interview.id;
+                          const exportError = exportErrors[interview.id];
+                          const turns       = turnCounts[interview.id] ?? 0;
+                          const aiTurns     = Math.ceil(turns / 2);
 
                           return (
                             <div key={interview.id} className="px-5 py-3">
@@ -466,9 +487,9 @@ export function AdminContent({
                                   >
                                     Open
                                   </a>
-                                  {(urls?.txt || existingExport?.txt_path) && (
+                                  {urls?.txt && (
                                     <a
-                                      href={urls?.txt ?? "#"}
+                                      href={urls.txt}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs text-stone-500 hover:text-stone-800
@@ -477,9 +498,9 @@ export function AdminContent({
                                       .txt
                                     </a>
                                   )}
-                                  {(urls?.json || existingExport?.json_path) && (
+                                  {urls?.json && (
                                     <a
-                                      href={urls?.json ?? "#"}
+                                      href={urls.json}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs text-stone-500 hover:text-stone-800
@@ -492,7 +513,7 @@ export function AdminContent({
                                     size="sm"
                                     variant="secondary"
                                     loading={isExporting}
-                                    onClick={() => handleGenerateExport(interview.id)}
+                                    onClick={() => handleGenerateExport(interview.id, participant.study_id)}
                                   >
                                     {isExporting ? "Exporting…" : "Export"}
                                   </Button>

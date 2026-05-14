@@ -1,65 +1,94 @@
-# SparkMeLive — AVP Interview MVP
+# SparkMeLive — Qualitative interview MVP
 
-A full-stack web application for conducting AVP (Autobiographical Verbal Protocol) life-story interviews. A full-stack web application for conducting AVP (Autobiographical Verbal Protocol) life-story interviews. Built for internal testing by the Stanford CPI and SALT Lab research teams.
+A full-stack web app for running **semi-structured, multi-domain qualitative interviews** with an AI interviewer. Built for internal testing by the Stanford CPI and SALT Lab research teams. The UI and pipeline are **SparkMe-inspired** (agenda manager, exploration planner, interviewer) while the **question protocol** is defined in JSON and can be swapped or edited independently of the code.
 
-**Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase (Auth + Postgres + Storage) · OpenAI-compatible LLM API · Deployable to Vercel
+**Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase (Postgres + Storage + anonymous auth) · OpenAI-compatible chat API · optional OpenAI TTS · deployable to Vercel
 
 ---
 
-## Architecture Overview
+## What participants see
+
+- **Login** (`/login`) — enter a study ID (anonymous Supabase session). Admins can link to `/login?id=YOUR_STUDY_ID` to pre-fill the field.
+- **Interview** (`/interview/[id]`) — voice orb, optional **typed** replies, live captions, slide-out **transcript** (on by default), **mute** for AI voice, and **Begin Interview** on first visit so browser audio autoplay rules are satisfied before TTS runs.
+- **Export during the interview** — download icon in the **bottom-right** of the control bar saves a `.txt` of the conversation so far (speakers + timestamps), built in the browser from the live transcript.
+- **Complete** (`/complete?interview_id=…`) — thank-you page with optional server-generated exports when Storage is configured (see [Exports](#exports)).
+
+---
+
+## What admins see (`/admin`)
+
+The admin dashboard is rendered **dynamically** (not statically cached) so new participants and interviews show up on refresh.
+
+- Create participants (single study ID or bulk seed `TEST001`–`TEST010`).
+- Per participant: **Login as** link (with study ID query param), **Delete** with confirmation (removes that participant’s data via API — use only for testing resets).
+- Per interview: open session, turn counts, **Export** — calls `POST /api/interview/export` and downloads **`.txt` and `.json`** immediately from the response body (works even if the `exports` bucket is missing; see [Exports](#exports)).
+- Configuration **Check now** for env/Supabase diagnostics.
+
+**Security:** `/admin` is not authenticated in the MVP. Before sharing a deployment URL, gate it (for example `ADMIN_ENABLED` + `notFound()` in `app/admin/page.tsx`) or protect the route behind your org’s auth.
+
+---
+
+## Architecture overview
 
 ```
-app/                    Next.js App Router pages and API routes
-├── login/              Participant auth (study_id → Supabase session)
-├── interview/[id]/     Chat interview UI
-├── complete/           Post-interview completion + export download
-├── admin/              Internal developer dashboard
+app/
+├── login/                 Participant login (study ID; optional ?id= prefill)
+├── interview/[id]/        Interview UI + client transcript export
+├── complete/              Post-interview screen + export links
+├── admin/                 Developer dashboard (dynamic server page)
 └── api/
-    ├── auth/login      Study ID authentication
-    ├── interview/      turn, create, export endpoints
-    └── audio/upload    Raw audio file upload
+    ├── auth/login         Study ID → anonymous Supabase session
+    ├── interview/
+    │   ├── create         Start / resume interview (idempotent; see below)
+    │   ├── turn           Participant message → next AI turn
+    │   └── export         Build JSON + TXT export (+ optional Storage upload)
+    ├── admin/
+    │   ├── participant      Create / delete participants
+    │   └── status           Env / connectivity checks
+    ├── tts/               Server-side TTS (optional; client can use browser TTS)
+    └── audio/upload       Raw audio upload to Storage
 
 lib/
 ├── prompts/
-│   ├── interviewer.ts  AVP system prompt (warm, narrative, McAdams-style)
-│   ├── planner.ts      PLACEHOLDER: SparkMe exploration_planner stub
-│   └── memory.ts       PLACEHOLDER: SparkMe agenda_manager stub
+│   ├── interviewer.ts     System prompt + persona + protocol-aware instructions
+│   ├── planner.ts         Exploration planner (strategic questions, utility scoring)
+│   └── memory.ts          Agenda manager (coverage, portrait, session summary)
 ├── config/
-│   ├── protocol.ts     TypeScript types for protocol schema
-│   └── avp-protocol.json  Full AVP life-story protocol (12 domains, sub1/sub2/sub3)
+│   ├── protocol.ts        TypeScript types for the protocol schema
+│   └── avp-protocol.json  Active protocol (topics, sub1/sub2/sub3 probes)
 ├── llm/
-│   └── generateNextQuestion.ts  OpenAI-compatible LLM abstraction
+│   └── generateNextQuestion.ts   OpenAI-compatible chat abstraction
 ├── interview/
-│   ├── engine.ts       Interview loop orchestrator
-│   └── export.ts       JSON + TXT export generation
-├── supabase/           Browser and server Supabase clients
-├── transcribe/         AWS Transcribe placeholder stub
-└── types/index.ts      Shared TypeScript types
+│   ├── engine.ts          Turn loop: planner + interviewer + completion checks
+│   └── export.ts          JSON + plain-text transcript (+ optional Storage)
+├── hooks/                 Speech, recording, TTS (including AudioContext unlock)
+├── supabase/              Browser + server Supabase clients
+├── transcribe/            AWS Transcribe stub (future)
+└── types/index.ts         Shared TypeScript types
 
-supabase/migrations/001_initial.sql   Full schema + RLS policies
-scripts/seed.ts                        Test data creation script
+supabase/migrations/001_initial.sql   Schema + RLS
+scripts/seed.ts                       CLI seed for TEST001
 ```
 
-### SparkMe Integration Points
+### SparkMe alignment
 
-The codebase is architected to slot in SparkMe's Python agent modules:
-
-| SparkMe Module | Location in this codebase | Integration Path |
-|---|---|---|
-| `interviewer/prompts.py` | `lib/prompts/interviewer.ts` | Replace/extend `buildInterviewerSystemPrompt()` |
-| `agenda_manager/prompts.py` | `lib/prompts/memory.ts` | Implement `updateMemory()` |
-| `exploration_planner/prompts.py` | `lib/prompts/planner.ts` | Implement `generateStrategicQuestions()` |
-| `topics.json` (flat) | `lib/config/avp-protocol.json` | AVP protocol with sub1/sub2/sub3 probe tree |
+| SparkMe idea | In this repo |
+|--------------|----------------|
+| Interviewer prompts | `lib/prompts/interviewer.ts` |
+| Agenda manager | `lib/prompts/memory.ts` |
+| Exploration planner | `lib/prompts/planner.ts` |
+| Topic / probe tree | `lib/config/avp-protocol.json` (filename is historical; content is the active protocol) |
 
 ---
 
-## Local Development Setup
+## Local development
 
 ### Prerequisites
 
 - Node.js 18+
 - A [Supabase](https://supabase.com) project
-- An OpenAI API key (or Stanford AI Playground key when available)
+- An OpenAI-**compatible** chat API key and base URL (see `.env.example` — Stanford AI Playground is documented there)
+- Optional: separate OpenAI credentials for **TTS**; if omitted, the app uses the browser’s `SpeechSynthesis` fallback
 
 ### 1. Clone and install
 
@@ -69,44 +98,32 @@ cd SparkMeLive
 npm install
 ```
 
-### 2. Set up environment variables
+### 2. Environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in `.env`:
+Fill in at least:
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-OPENAI_API_KEY=sk-...
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
-```
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`
+- Optional TTS block: `OPENAI_TTS_API_KEY`, etc. (see `.env.example`)
 
-### 3. Set up Supabase
+### 3. Supabase
 
-**Apply the database schema:**
+**Schema:** run `supabase/migrations/001_initial.sql` in the SQL Editor, or use `npx supabase db push` if you use the CLI.
 
-Option A — Supabase Dashboard SQL Editor:
-1. Go to your project → SQL Editor
-2. Paste and run the contents of `supabase/migrations/001_initial.sql`
+**Storage buckets (recommended):**
 
-Option B — Supabase CLI:
-```bash
-npx supabase db push
-```
+| Bucket | Purpose |
+|--------|---------|
+| `audio` | Private — raw recordings from the client |
+| `exports` | Private — uploaded `export.json` / `export.txt` and signed URLs for `/complete` and `GET /api/interview/export` |
 
-**Create Storage buckets:**
+If `exports` is missing, **exports still succeed**: `POST /api/interview/export` returns file contents in the JSON body and the admin UI downloads locally. The `/complete` page primarily uses **signed URLs**; for a guaranteed copy without Storage, participants should use **Export during the interview** before leaving.
 
-In your Supabase dashboard → Storage → New bucket:
-1. `audio` — private, for raw audio recordings
-2. `exports` — private, for JSON/TXT export files
-
-**Enable Anonymous Sign-ins** (required for the auth flow):
-- Dashboard → Authentication → Providers → Anonymous → Enable
+**Auth:** enable **Anonymous** sign-ins (Authentication → Providers → Anonymous).
 
 ### 4. Seed test data
 
@@ -114,240 +131,106 @@ In your Supabase dashboard → Storage → New bucket:
 npm run seed
 ```
 
-This creates participant `TEST001` and a sample interview session.
+Creates participant `TEST001` (and related rows per `scripts/seed.ts`).
 
-### 5. Start the dev server
+### 5. Dev server
 
 ```bash
 npm run dev
 ```
 
-Visit:
-- **Interview login:** http://localhost:3000/login (enter `TEST001`)
-- **Admin dashboard:** http://localhost:3000/admin
-- **Direct interview:** http://localhost:3000/interview/[id]
+- Interview login: http://localhost:3000/login (try `TEST001`)
+- Admin: http://localhost:3000/admin
+- After login you are routed to an interview URL like `/interview/<uuid>`
 
 ---
 
-## Vercel Deployment
+## Interview lifecycle and APIs
 
-### 1. Push to GitHub
+### `POST /api/interview/create`
 
-```bash
-git add .
-git commit -m "Initial AVP Interview MVP"
-git push origin main
-```
+Ensures there is an **active** interview for the participant and an **opening turn**. It is **idempotent**: if an opening turn already exists for that session, the API responds with **409 Conflict** and the same payload shape as success so the client can hydrate the transcript without creating a duplicate interview.
 
-### 2. Import project in Vercel
+### `POST /api/interview/turn`
 
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import your GitHub repository
-3. Framework preset: **Next.js** (auto-detected)
-4. Add environment variables (same as `.env` above)
+Saves the participant turn, runs the **engine** (`lib/interview/engine.ts`): agenda update → strategic questions → next interviewer message, persists `agent_state` on the interview row, and returns the new turns plus `is_complete` when the session should end.
 
-### 3. Deploy
+### `POST /api/interview/export` / `GET /api/interview/export`
 
-Click Deploy. Vercel handles the Next.js build automatically.
-
-Your app will be live at `https://your-project.vercel.app`.
-
-**Note:** Vercel's API routes have a default 10s timeout. The LLM call in `/api/interview/turn` may take 5–15 seconds depending on the model. For production, consider:
-- Upgrading to Vercel Pro (60s function timeout)
-- Or using Vercel Edge Functions with streaming responses
+- **POST** loads the full transcript from Postgres, builds JSON and plain text, returns **`json_content`** and **`txt_content`** in the response (always), and **optionally** uploads to the `exports` bucket and returns **`json_url`** / **`txt_url`** when Storage succeeds.
+- **GET** reports whether a prior export row exists and refreshes signed URLs when paths are present.
 
 ---
 
-## Supabase Setup Detail
+## Interview protocol
 
-### Row Level Security
+The running protocol lives in **`lib/config/avp-protocol.json`**. It is organized as **topics** (ordered sections), each with a tree of probes:
 
-RLS is enabled on all tables. Policies allow authenticated users to read only their own data. All writes go through server API routes using the service role key (bypasses RLS).
+- **`sub1`** — main questions  
+- **`sub2`** — follow-ups (children of sub1)  
+- **`sub3`** — deeper probes where needed  
 
-**Before real participant data deployment:**
-- Review RLS policies in `supabase/migrations/001_initial.sql`
-- Consider migrating auth to magic links (`signInWithOtp`) instead of the current deterministic password scheme
-- Add admin role policies for the research team
+Question text can include conditional cues (e.g. `[IF APPLICABLE]`, `[PROBE ONLY IF NECESSARY]`); the interviewer prompt in `lib/prompts/interviewer.ts` tells the model how to respect those.
 
-### Storage Bucket Policies
+**Current topics (11):** Life History; Family; Work; Neighborhoods and Social Groups; Finances — Expenses; Finances — Savings and Debt; Finances — Resources Beyond Employment; Health and Health Care; Politics and Current Events; Technology; Conclusion.
 
-After creating the buckets, add these policies in **Supabase → Storage → Policies**:
-
-**audio bucket (allow authenticated user to read own files):**
-```sql
-CREATE POLICY "auth users can read own audio"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'audio'
-  AND auth.role() = 'authenticated'
-);
-```
-
-**exports bucket:**
-```sql
-CREATE POLICY "auth users can read own exports"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'exports'
-  AND auth.role() = 'authenticated'
-);
-```
-
-All uploads happen server-side via service role and bypass storage RLS.
+To run a different study: edit the JSON (or add another file), then point the turn route at it (`app/api/interview/turn/route.ts` imports this file today).
 
 ---
 
-## Interview Protocol
+## Exports
 
-The AVP protocol is defined in `lib/config/avp-protocol.json`. It has 12 life-story domains:
+### Plain-text shape
 
-1. Peak Experience
-2. Low Point
-3. Turning Point
-4. Earliest Memory
-5. Positive Childhood Memory
-6. Negative/Difficult Childhood Memory
-7. Important Adult Experience
-8. Challenge or Adversity
-9. Meaningful Relationship
-10. Personal Beliefs and Values
-11. Future Chapter
-12. Life Theme
+Both server-generated TXT and the **in-interview** download use the same general idea: header lines (study ID, interview ID, export time), then blocks per turn:
 
-Each domain has:
-- `sub1` probes: primary questions (must be asked in order)
-- `sub2` probes: follow-up deepening questions (children of sub1)
-- `sub3` probes: deepest layer (children of sub2)
+- Speaker label (`INTERVIEWER` / `PARTICIPANT`)
+- Timestamp when available (`timestamp_start` on each turn)
+- Full message text
 
-To customize for a different protocol, edit `lib/config/avp-protocol.json` or create a new protocol file and update `app/api/interview/turn/route.ts` to import it.
+Plain-text exports use the same general layout: a titled header (currently **"QUALITATIVE INTERVIEW TRANSCRIPT"** in both server and in-app downloads), study and interview identifiers, export time, then each turn with speaker label and timestamp when available.
+
+### JSON shape (`InterviewExportPayload`)
+
+See `lib/types/index.ts` — `participant_id`, `study_id`, `interview_id`, `mode`, timestamps, `completed`, optional `audio_url`, `transcript[]` with `turn_index`, `speaker`, `text`, `timestamp_start` / `timestamp_end`, and `metadata` (`exported_at`, `total_turns`, `version`).
+
+---
+
+## Vercel deployment
+
+1. Push the repo to GitHub.
+2. Import in [Vercel](https://vercel.com/new) as a Next.js project.
+3. Add the same env vars as production (including `NEXT_PUBLIC_APP_URL` for your deployment URL if you use it).
+
+Serverless functions default to a **10s** timeout on the Hobby plan; LLM calls in `/api/interview/turn` can exceed that. Consider Pro (longer limit), a faster model, or moving generation to a background worker for heavy use.
 
 ---
 
 ## Changing the LLM
 
-All LLM calls go through `lib/llm/generateNextQuestion.ts`.
-
-**Switch to Stanford AI Playground (when access is granted):**
-```env
-OPENAI_BASE_URL=https://stanford-ai-playground-endpoint.example.com/v1
-OPENAI_API_KEY=your-stanford-key
-OPENAI_MODEL=gpt-4o
-```
-
-**Switch model:**
-```env
-OPENAI_MODEL=gpt-4o
-# or: gpt-4o-mini (cheaper, faster)
-# or: gpt-5-mini (when available)
-```
-
-No code changes needed — only env var changes.
+All chat completions go through `lib/llm/generateNextQuestion.ts`. Point `OPENAI_BASE_URL` and `OPENAI_MODEL` at any OpenAI-compatible server; no code changes required for typical provider swaps.
 
 ---
 
-## AWS Transcribe (Future)
+## AWS Transcribe (future)
 
-Audio is currently saved as raw files in Supabase Storage. AWS Transcribe integration is stubbed in `lib/transcribe/index.ts`.
-
-When ready to activate:
-1. Install AWS SDK: `npm install @aws-sdk/client-transcribe @aws-sdk/client-s3`
-2. Add env vars: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_TRANSCRIBE_BUCKET`
-3. Implement `startTranscriptionJob()` in `lib/transcribe/index.ts`
-4. Uncomment the integration call in `app/api/audio/upload/route.ts`
-
-Reference:
-- [AWS Transcribe docs](https://docs.aws.amazon.com/transcribe/latest/dg/getting-started.html)
-- [AWS SDK v3 quickstart](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-started-nodejs.html)
+Audio is stored as files in Supabase Storage. A stub lives in `lib/transcribe/index.ts`. When you wire Transcribe, extend `app/api/audio/upload/route.ts` per the comments in that stub.
 
 ---
 
-## Admin Dashboard
+## Running a quick self-test
 
-Visit `/admin` for the internal developer dashboard:
-- View all participants and their interview status
-- Navigate directly to any interview session
-- Generate and download JSON/TXT exports
-- See audio recording status
-
-**Security note:** The admin route has no authentication in MVP. Before sharing the deployment URL outside the core team, add basic protection:
-```ts
-// app/admin/page.tsx — add at top:
-if (process.env.ADMIN_ENABLED !== "true") notFound()
-```
-And set `ADMIN_ENABLED=true` only in your local/staging `.env`.
-
----
-
-## Export Format
-
-### JSON Export (`export.json`)
-
-```json
-{
-  "participant_id": "uuid",
-  "study_id": "TEST001",
-  "interview_id": "uuid",
-  "mode": "avp",
-  "started_at": "ISO timestamp",
-  "ended_at": "ISO timestamp",
-  "completed": true,
-  "audio_url": "signed URL or null",
-  "transcript": [
-    {
-      "turn_index": 0,
-      "speaker": "interviewer",
-      "text": "...",
-      "timestamp_start": "ISO timestamp",
-      "timestamp_end": "ISO timestamp"
-    }
-  ],
-  "metadata": {
-    "exported_at": "ISO timestamp",
-    "total_turns": 12,
-    "version": "1.0.0"
-  }
-}
-```
-
-### TXT Export (`export.txt`)
-
-Plain-text transcript with headers and labeled turns:
-```
-========================================================================
-AVP LIFE STORY INTERVIEW TRANSCRIPT
-========================================================================
-Study ID:      TEST001
-Interview ID:  ...
-...
-------------------------------------------------------------------------
-TRANSCRIPT
-------------------------------------------------------------------------
-
-INTERVIEWER [Jan 1, 2026, 10:00:00 AM PST]
-Thank you so much for being here today...
-
-PARTICIPANT  [Jan 1, 2026, 10:01:00 AM PST]
-...
-```
-
----
-
-## Running Tests / Self-Interview
-
-To test the system end-to-end before the David evaluation:
-
-1. `npm run seed` — creates TEST001 participant
-2. `npm run dev`
-3. Visit http://localhost:3000/login, enter `TEST001`
-4. Complete a short interview (5–10 turns)
-5. Visit http://localhost:3000/admin to inspect transcript and download export
-6. Compare the transcript structure against qualitative notes from actual AVP interviews
+1. `npm run seed` and `npm run dev`
+2. Open `/login`, enter `TEST001`, complete **Begin Interview** and a few turns (voice and/or keyboard)
+3. Use the **download** control in the interview footer to verify TXT export
+4. Open `/admin`, confirm the participant and interview, click **Export** for `.txt` + `.json`
+5. Inspect transcript structure against your study’s coding or memo needs
 
 ---
 
 ## Citation
 
-If using SparkMe's architecture in publications:
+If referencing SparkMe’s architecture in publications:
 
 ```bibtex
 @article{anugraha2026sparkme,

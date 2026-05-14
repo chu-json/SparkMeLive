@@ -79,6 +79,10 @@ export interface ExportRequest {
 export interface ExportResponse {
   json_url: string;
   txt_url: string;
+  /** Raw TXT transcript — always present, download directly without Storage */
+  txt_content: string;
+  /** Raw JSON export — always present, download directly without Storage */
+  json_content: string;
   export: InterviewExportPayload;
 }
 

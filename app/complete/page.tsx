@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { CompletionContent } from "./CompletionContent";
 
 export const metadata = {
-  title: "Interview Complete — AVP Life Story Interview",
+  title: "Interview Complete — SparkMeLive",
 };
 
 export default function CompletePage() {
