@@ -4,7 +4,13 @@ export const metadata = {
   title: "Sign In — AVP Life Story Interview",
 };
 
-export default function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ id?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { id } = await searchParams;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-stone-50">
       <div className="w-full max-w-md">
@@ -35,7 +41,7 @@ export default function LoginPage() {
 
         {/* Login card */}
         <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8">
-          <LoginForm />
+          <LoginForm defaultStudyId={id ?? ""} />
         </div>
 
         {/* Footer note */}

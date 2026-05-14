@@ -54,6 +54,11 @@ export function InterviewClient({
   const [textInput, setTextInput]               = useState("");
   const [isMuted, setIsMuted]                   = useState(false);
 
+  // Audio gate — true once the user clicks "Begin Interview".
+  // Gating the first TTS call behind a user gesture satisfies Chrome's
+  // autoplay policy, preventing the "muted then starts mid-sentence" issue.
+  const [hasBegun, setHasBegun] = useState(initialTurns.length > 0);
+
   const typewriterRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const captionGenRef  = useRef(0);
 
@@ -102,15 +107,16 @@ export function InterviewClient({
     }
   }, [speech.isListening, speech.finalTranscript, speech.interimTranscript]);
 
-  // Animate new interviewer turns
+  // Animate new interviewer turns — only after the user has clicked "Begin"
+  // so the AudioContext is already unlocked by a prior gesture.
   useEffect(() => {
-    if (turns.length === 0) return;
+    if (turns.length === 0 || !hasBegun) return;
     const last = turns[turns.length - 1];
     if (last.speaker === "interviewer" && !isLoading) {
       void animateAICaption(last.text);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [turns]);
+  }, [turns, hasBegun]);
 
   // ==========================================================================
   // Typewriter animation
@@ -297,6 +303,19 @@ export function InterviewClient({
   }, [orbState, audio, speech, tts, interview.id, turns.length, handleSubmit]);
 
   // ==========================================================================
+  // Begin — unlocks AudioContext within the gesture, then starts the interview
+  // ==========================================================================
+
+  const handleBegin = useCallback(() => {
+    // unlock() MUST run synchronously here, before any await, so it fires
+    // while we are still inside Chrome's user-gesture activation window.
+    tts.unlock();
+    setHasBegun(true);
+    // The turns useEffect will fire because hasBegun just became true,
+    // and will call animateAICaption — which now runs after unlock().
+  }, [tts]);
+
+  // ==========================================================================
   // Text mode submit
   // ==========================================================================
 
@@ -425,6 +444,11 @@ export function InterviewClient({
               Starting…
             </p>
           )}
+          {canInteract && !hasBegun && !isLoading && (
+            <p className="text-[11px] text-stone-500 tracking-widest uppercase">
+              Ready
+            </p>
+          )}
         </div>
 
         {/* Live caption */}
@@ -523,32 +547,46 @@ export function InterviewClient({
           )}
         </button>
 
-        {/* Center: mic button */}
+        {/* Center: Begin button (first load) or mic button (active) */}
         <div className="relative flex items-center justify-center">
-          {isRecording && (
-            <div className="mic-pulse-ring absolute w-[76px] h-[76px] rounded-full
-                            border-2 border-orange-400/60" />
+          {!hasBegun && canInteract ? (
+            /* Begin Interview — click unlocks AudioContext then starts animation */
+            <button
+              onClick={handleBegin}
+              className="px-7 py-3.5 rounded-full bg-stone-800 text-white text-[15px]
+                         font-medium hover:bg-stone-700 transition-colors shadow-md
+                         hover:scale-105 duration-200"
+            >
+              Begin Interview
+            </button>
+          ) : (
+            <>
+              {isRecording && (
+                <div className="mic-pulse-ring absolute w-[76px] h-[76px] rounded-full
+                                border-2 border-orange-400/60" />
+              )}
+              <button
+                onClick={handleMicPress}
+                disabled={isMicDisabled}
+                aria-label={isRecording ? "Stop recording" : "Start recording"}
+                className={`relative w-[68px] h-[68px] rounded-full flex items-center justify-center
+                            transition-all duration-200 shadow-md
+                            disabled:opacity-30 disabled:cursor-not-allowed
+                            ${isRecording
+                              ? "bg-orange-500 hover:bg-orange-600 scale-105 shadow-orange-200"
+                              : "bg-stone-800 hover:bg-stone-700 hover:scale-105 shadow-stone-200"
+                            }
+                            ${orbState === "thinking" ? "animate-pulse cursor-wait" : ""}
+                          `}
+              >
+                {isRecording ? (
+                  <StopIcon className="w-6 h-6 text-white" />
+                ) : (
+                  <MicIcon className={`w-6 h-6 ${orbState === "thinking" ? "text-white/40" : "text-white"}`} />
+                )}
+              </button>
+            </>
           )}
-          <button
-            onClick={handleMicPress}
-            disabled={isMicDisabled}
-            aria-label={isRecording ? "Stop recording" : "Start recording"}
-            className={`relative w-[68px] h-[68px] rounded-full flex items-center justify-center
-                        transition-all duration-200 shadow-md
-                        disabled:opacity-30 disabled:cursor-not-allowed
-                        ${isRecording
-                          ? "bg-orange-500 hover:bg-orange-600 scale-105 shadow-orange-200"
-                          : "bg-stone-800 hover:bg-stone-700 hover:scale-105 shadow-stone-200"
-                        }
-                        ${orbState === "thinking" ? "animate-pulse cursor-wait" : ""}
-                      `}
-          >
-            {isRecording ? (
-              <StopIcon className="w-6 h-6 text-white" />
-            ) : (
-              <MicIcon className={`w-6 h-6 ${orbState === "thinking" ? "text-white/40" : "text-white"}`} />
-            )}
-          </button>
         </div>
 
         {/* Right: placeholder for visual balance */}

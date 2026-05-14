@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 
-export function LoginForm() {
-  const [studyId, setStudyId] = useState("");
+export function LoginForm({ defaultStudyId = "" }: { defaultStudyId?: string }) {
+  const [studyId, setStudyId] = useState(defaultStudyId);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();

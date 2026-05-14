@@ -17,6 +17,14 @@ export interface TTSControls {
    *  playing (resolves to 0 on failure so callers can handle gracefully). */
   speak: (text: string) => Promise<number>;
   stop: () => void;
+  /**
+   * Call this synchronously inside a user-gesture handler (click/keydown)
+   * BEFORE any await. Creates and resumes the AudioContext while still
+   * within Chrome's gesture-activation window, so subsequent speak() calls
+   * produce audio even after async work (fetch, decode, etc.) breaks the
+   * gesture chain.
+   */
+  unlock: () => void;
 }
 
 type TTSMode = "api" | "browser" | "unknown";
@@ -241,6 +249,21 @@ export function useTextToSpeech(): TTSState & TTSControls {
     return speakViaBrowser(text);
   }, [stopAll, speakViaAPI, speakViaBrowser]);
 
+  // ── unlock() — must be called synchronously in a gesture handler ─────────
+  // Creates / resumes the AudioContext while still inside Chrome's
+  // activation window, so subsequent speak() calls (even after async work)
+  // are considered to originate from the gesture.
+
+  const unlock = useCallback(() => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      audioCtxRef.current = new AudioContext();
+    }
+    if (audioCtxRef.current.state === "suspended") {
+      // Do NOT await — must stay synchronous to remain in gesture context
+      void audioCtxRef.current.resume();
+    }
+  }, []);
+
   const stop = useCallback(() => stopAll(), [stopAll]);
 
   return {
@@ -250,5 +273,6 @@ export function useTextToSpeech(): TTSState & TTSControls {
     lastAudioDuration,
     speak,
     stop,
+    unlock,
   };
 }
