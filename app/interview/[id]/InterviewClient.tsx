@@ -48,9 +48,9 @@ export function InterviewClient({
   const [captionSpeaker, setCaptionSpeaker]   = useState<"ai" | "user" | null>(null);
   const [isAnimatingCaption, setIsAnimatingCaption] = useState(false);
 
-  // UI panel toggles — transcript and text input both open by default
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(true);
-  const [isTextInputOpen, setIsTextInputOpen]   = useState(true);
+  // UI panel toggles — both start closed so the orb/caption have full screen on mobile
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isTextInputOpen, setIsTextInputOpen]   = useState(false);
   const [textInput, setTextInput]               = useState("");
   const [isMuted, setIsMuted]                   = useState(false);
 
@@ -423,10 +423,10 @@ export function InterviewClient({
           Life Story Interview
         </h1>
 
-        {/* Right: transcript toggle — large and prominent */}
+        {/* Right: transcript toggle */}
         <button
           onClick={() => setIsTranscriptOpen((o) => !o)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-full border text-sm
                       font-medium transition-all duration-150
                       ${isTranscriptOpen
                         ? "bg-stone-800 border-stone-800 text-white"
@@ -434,7 +434,9 @@ export function InterviewClient({
                       }`}
         >
           <ListIcon className="w-4 h-4" />
-          <span>{isTranscriptOpen ? "Hide Transcript" : "Transcript"}</span>
+          <span className="hidden sm:inline">
+            {isTranscriptOpen ? "Hide Transcript" : "Transcript"}
+          </span>
           {turns.length > 0 && (
             <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded-full
                               ${isTranscriptOpen
@@ -449,8 +451,8 @@ export function InterviewClient({
 
       {/* ── Main orb + caption area ─────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col items-center justify-center gap-5 px-6 overflow-hidden">
-        {/* Orb */}
-        <div className="relative">
+        {/* Orb — scales down on small screens via CSS transform so layout stays stable */}
+        <div className="relative orb-scale-wrapper">
           {orbState === "thinking" && (
             <div className="absolute -inset-4 rounded-full border border-stone-300 animate-spin"
                  style={{ animationDuration: "3s" }} />
@@ -554,15 +556,15 @@ export function InterviewClient({
                   }
                 }}
                 disabled={isMicDisabled}
-                placeholder="Type your response here… (Enter to send, Shift+Enter for new line)"
-                rows={4}
+                placeholder="Type your response here…"
+                rows={3}
                 className="w-full resize-none bg-transparent px-4 pt-3.5 pb-2
                            text-[15px] text-stone-800 placeholder-stone-400
                            focus:outline-none leading-relaxed select-text"
-                autoFocus={isTextInputOpen}
               />
               <div className="flex items-center justify-between px-4 pb-3">
-                <span className="text-[11px] text-stone-400">Shift+Enter for new line</span>
+                <span className="text-[11px] text-stone-400 hidden sm:inline">Shift+Enter for new line</span>
+                <span className="text-[11px] text-stone-400 sm:hidden">Enter to send</span>
                 <button
                   onClick={handleTextSubmit}
                   disabled={!textInput.trim() || isMicDisabled}
@@ -580,7 +582,7 @@ export function InterviewClient({
 
       {/* ── Controls bar ────────────────────────────────────────────────────── */}
       <nav className="relative z-10 flex items-center justify-between
-                      px-10 py-4 bg-white border-t border-stone-200 shrink-0">
+                      px-5 sm:px-10 py-4 bg-white border-t border-stone-200 shrink-0">
         {/* Left: mute toggle */}
         <button
           onClick={() => {

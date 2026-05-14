@@ -11,12 +11,28 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent font size inflation on orientation change (iOS) */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   background-color: #fafaf9;
   color: #1c1917;
+  /* Smooth momentum scrolling on iOS for scrollable children */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Eliminate 300ms tap delay and callout menus on all buttons / links */
+button, a, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Scrollable regions should scroll smoothly on iOS */
+.overflow-y-auto, .overflow-y-scroll {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ============================================================
@@ -135,4 +151,12 @@ body {
 
 .mic-pulse-ring {
   animation: mic-pulse 1.2s ease-out infinite;
+}
+
+/* Scale the orb down on small screens without breaking layout */
+@media (max-width: 639px) {
+  .orb-scale-wrapper {
+    transform: scale(0.78);
+    transform-origin: center center;
+  }
 }

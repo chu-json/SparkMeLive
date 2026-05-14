@@ -50,12 +50,41 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
     setError(null);
     chunksRef.current = [];
 
+    // Guard: mediaDevices requires HTTPS (or localhost) and a modern browser
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError(
+        "Microphone access is not available. Please ensure you are on a secure (HTTPS) connection and use a supported browser (Chrome, Safari, Firefox)."
+      );
+      setRecorderState("error");
+      return;
+    }
+
+    // Guard: MediaRecorder is not available on all browsers (e.g. Firefox for iOS)
+    if (typeof MediaRecorder === "undefined") {
+      setError(
+        "Audio recording is not supported in this browser. Please try Chrome or Safari."
+      );
+      setRecorderState("error");
+      return;
+    }
+
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-    } catch {
-      setError("Microphone access denied.");
+    } catch (err) {
+      const name = (err as DOMException)?.name;
+      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+        setError(
+          "Microphone access denied. Please tap 'Allow' when prompted, or enable microphone access in your browser/device settings and try again."
+        );
+      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+        setError("No microphone detected. Please connect a microphone and try again.");
+      } else if (name === "SecurityError") {
+        setError("Microphone access requires a secure (HTTPS) connection.");
+      } else {
+        setError("Could not access the microphone. Please check your browser settings.");
+      }
       setRecorderState("error");
       return;
     }
@@ -84,13 +113,19 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
       // Amplitude tracking is optional — don't block recording
     }
 
-    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-      ? "audio/webm;codecs=opus"
-      : MediaRecorder.isTypeSupported("audio/webm")
-      ? "audio/webm"
-      : "audio/ogg";
+    // Pick the best supported MIME type.
+    // Priority: webm/opus (Chrome/Firefox) → webm → mp4 (Safari) → ogg → let browser pick
+    const MIME_CANDIDATES = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg",
+    ];
+    const mimeType = MIME_CANDIDATES.find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
 
-    const recorder = new MediaRecorder(stream, { mimeType });
+    const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
@@ -126,7 +161,9 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
 
       const mimeType = recorder.mimeType || "audio/webm";
       const blob = new Blob(chunksRef.current, { type: mimeType });
-      const ext  = mimeType.includes("ogg") ? "ogg" : "webm";
+      const ext  = mimeType.includes("ogg") ? "ogg"
+                 : mimeType.includes("mp4") ? "mp4"
+                 : "webm";
       const file = new File([blob], `recording.${ext}`, { type: mimeType });
 
       const formData = new FormData();
