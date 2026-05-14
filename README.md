@@ -93,7 +93,7 @@ scripts/seed.ts                       CLI seed for TEST001
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/JCNOOB123/SparkMeLive.git
+git clone https://github.com/chu-json/SparkMeLive.git
 cd SparkMeLive
 npm install
 ```
