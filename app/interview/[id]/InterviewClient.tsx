@@ -34,6 +34,14 @@ export function InterviewClient({
   const [error, setError]           = useState<string | null>(null);
   const [isStarted, setIsStarted]   = useState(initialTurns.length > 0);
 
+  // Sync turns if the server component refreshes with new data (safety net)
+  useEffect(() => {
+    if (initialTurns.length > 0 && turns.length === 0) {
+      setTurns(initialTurns);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTurns]);
+
   // Orb & caption state
   const [orbState, setOrbState]               = useState<OrbState>("idle");
   const [caption, setCaption]                 = useState("");
@@ -156,12 +164,26 @@ export function InterviewClient({
         body: JSON.stringify({ participant_id: interview.participant_id }),
       });
 
-      if (res.status === 409) { router.refresh(); return; }
-      if (!res.ok) {
+      // Both 200 (created) and 409 (already existed) carry the opening turn.
+      // We set state directly rather than router.refresh() so React picks it up.
+      if (res.ok || res.status === 409) {
         const data = await res.json();
-        throw new Error(data.error ?? "Failed to start interview");
+        const openingTurn: TranscriptTurn = {
+          id: data.turn_id ?? `opening-${Date.now()}`,
+          interview_id: interview.id,
+          turn_index: 0,
+          speaker: "interviewer",
+          text: data.opening_question,
+          timestamp_start: new Date().toISOString(),
+          timestamp_end: null,
+          created_at: new Date().toISOString(),
+        };
+        setTurns([openingTurn]);
+        return;
       }
-      router.refresh();
+
+      const data = await res.json();
+      throw new Error(data.error ?? "Failed to start interview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start interview");
       setOrbState("idle");
