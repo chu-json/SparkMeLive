@@ -40,15 +40,12 @@ export function InterviewClient({
   const [captionSpeaker, setCaptionSpeaker]   = useState<"ai" | "user" | null>(null);
   const [isAnimatingCaption, setIsAnimatingCaption] = useState(false);
 
-  // UI panel toggles
-  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
-  const [isTextInputOpen, setIsTextInputOpen]   = useState(false);
+  // UI panel toggles — transcript and text input both open by default
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(true);
+  const [isTextInputOpen, setIsTextInputOpen]   = useState(true);
   const [textInput, setTextInput]               = useState("");
   const [isMuted, setIsMuted]                   = useState(false);
 
-  // Typewriter timer + generation counter.
-  // Incrementing captionGenRef.current cancels any in-flight animation regardless
-  // of whether it is currently awaiting the TTS fetch or running the step loop.
   const typewriterRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const captionGenRef  = useRef(0);
 
@@ -57,7 +54,7 @@ export function InterviewClient({
   const audio  = useAudioRecorder();
   const tts    = useTextToSpeech();
 
-  // Combined amplitude ref: mic amplitude during listening, TTS amplitude during speaking
+  // Combined amplitude ref
   const activeAmplitudeRef = useRef<number>(0);
   useEffect(() => {
     const tick = () => {
@@ -97,7 +94,7 @@ export function InterviewClient({
     }
   }, [speech.isListening, speech.finalTranscript, speech.interimTranscript]);
 
-  // If a new interviewer turn arrives and it's the most recent one, animate it
+  // Animate new interviewer turns
   useEffect(() => {
     if (turns.length === 0) return;
     const last = turns[turns.length - 1];
@@ -112,7 +109,6 @@ export function InterviewClient({
   // ==========================================================================
 
   const animateAICaption = useCallback(async (text: string) => {
-    // Cancel any running animation (including one still awaiting the TTS fetch)
     if (typewriterRef.current) clearTimeout(typewriterRef.current);
     const gen = ++captionGenRef.current;
 
@@ -121,16 +117,9 @@ export function InterviewClient({
     setOrbState("speaking");
     setCaption("");
 
-    // Start TTS — await the fetch so we get audio duration for caption sync.
-    // speak() is non-blocking in terms of audio playback.
     const audioDurationSec = isMuted ? 0 : await tts.speak(text);
-
-    // If the user interrupted (pressed mic) while we were awaiting the fetch, bail out.
     if (gen !== captionGenRef.current) return;
 
-    // Sync typewriter speed to audio duration.
-    // Target: caption finishes at ~85% of audio duration (text visible before spoken).
-    // Floor at 12ms/char (very fast) and ceil at 55ms/char (readable).
     let msPerChar = TYPEWRITER_MS;
     if (audioDurationSec > 0 && text.length > 0) {
       const targetMs = audioDurationSec * 1000 * 0.85;
@@ -139,9 +128,7 @@ export function InterviewClient({
 
     let i = 0;
     const step = () => {
-      // Another animation was started — stop this one
       if (gen !== captionGenRef.current) return;
-
       if (i < text.length) {
         setCaption(text.slice(0, ++i));
         typewriterRef.current = setTimeout(step, msPerChar);
@@ -150,7 +137,6 @@ export function InterviewClient({
         if (audioDurationSec === 0) setOrbState("idle");
       }
     };
-
     typewriterRef.current = setTimeout(step, msPerChar);
   }, [tts, isMuted]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -175,7 +161,6 @@ export function InterviewClient({
         const data = await res.json();
         throw new Error(data.error ?? "Failed to start interview");
       }
-
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to start interview");
@@ -187,24 +172,21 @@ export function InterviewClient({
   };
 
   // ==========================================================================
-  // Submit a participant response (text or voice transcript)
+  // Submit a participant response
   // ==========================================================================
 
   const handleSubmit = useCallback(async (text: string) => {
     if (!text.trim() || isLoading) return;
 
     setTextInput("");
-    setIsTextInputOpen(false);
     setIsLoading(true);
     setError(null);
     setOrbState("thinking");
 
-    // Show the user's caption immediately
     setCaptionSpeaker("user");
     setCaption(text.trim());
     setIsAnimatingCaption(false);
 
-    // Optimistic turn
     const optimisticTurn: TranscriptTurn = {
       id: `optimistic-${Date.now()}`,
       interview_id: interview.id,
@@ -260,7 +242,6 @@ export function InterviewClient({
     if (orbState === "thinking" || turns.length === 0) return;
 
     if (audio.recorderState === "recording") {
-      // Stop — commit the transcript
       audio.stopRecording(interview.id);
       speech.stopListening();
 
@@ -274,20 +255,14 @@ export function InterviewClient({
         setCaptionSpeaker(null);
       }
     } else {
-      // Cancel any in-flight caption animation before switching to listening mode.
-      // Incrementing the gen counter stops both the typewriter step loop AND any
-      // pending post-fetch continuation in animateAICaption.
       captionGenRef.current++;
       if (typewriterRef.current) {
         clearTimeout(typewriterRef.current);
         typewriterRef.current = null;
       }
       setIsAnimatingCaption(false);
-
-      // Stop TTS audio
       tts.stop();
 
-      // Start listening
       setOrbState("listening");
       setCaptionSpeaker("user");
       setCaption("");
@@ -313,7 +288,6 @@ export function InterviewClient({
   // Derived UI values
   // ==========================================================================
 
-  // Build previous turns list for the caption (last 2 completed turns before the current one)
   const previousCaptionTurns = turns
     .filter((t) => !t.id.startsWith("optimistic-"))
     .slice(-3, -1)
@@ -322,9 +296,9 @@ export function InterviewClient({
       text: t.text,
     }));
 
-  const isRecording     = audio.recorderState === "recording";
-  const canInteract     = turns.length > 0 && !interview.completed;
-  const isMicDisabled   = orbState === "thinking" || !canInteract;
+  const isRecording   = audio.recorderState === "recording";
+  const canInteract   = turns.length > 0 && !interview.completed;
+  const isMicDisabled = orbState === "thinking" || !canInteract;
 
   const formatDuration = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
@@ -334,65 +308,68 @@ export function InterviewClient({
   // ==========================================================================
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col overflow-hidden select-none"
-      style={{ background: "radial-gradient(ellipse at 50% 0%, #0f0f2a 0%, #080810 65%)" }}
-    >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <header className="relative z-10 flex items-center justify-between px-5 pt-5 pb-3">
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-stone-50 select-none">
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <header className="relative z-10 flex items-center justify-between px-5 py-3
+                         bg-white border-b border-stone-200">
         {/* Left: session badge */}
-        <div className="flex items-center gap-2.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 opacity-60" />
-          <span className="text-[11px] text-white/30 font-mono tracking-widest uppercase">
+        <div className="flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+          <span className="text-[11px] text-stone-400 font-mono tracking-widest uppercase">
             {studyId}
           </span>
         </div>
 
         {/* Center: title */}
-        <h1 className="absolute left-1/2 -translate-x-1/2 text-[13px] font-medium text-white/50 tracking-wide">
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-[13px] font-medium
+                       text-stone-600 tracking-wide">
           Life Story Interview
         </h1>
 
-        {/* Right: transcript toggle */}
+        {/* Right: transcript toggle — large and prominent */}
         <button
-          onClick={() => setIsTranscriptOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                     border border-white/10 text-white/40 hover:text-white/70
-                     hover:border-white/20 text-[11px] font-medium tracking-wide
-                     transition-all duration-150"
+          onClick={() => setIsTranscriptOpen((o) => !o)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full border text-sm
+                      font-medium transition-all duration-150
+                      ${isTranscriptOpen
+                        ? "bg-stone-800 border-stone-800 text-white"
+                        : "bg-stone-100 border-stone-200 text-stone-600 hover:bg-stone-200 hover:text-stone-800"
+                      }`}
         >
-          <ListIcon className="w-3.5 h-3.5" />
-          <span>Transcript</span>
+          <ListIcon className="w-4 h-4" />
+          <span>{isTranscriptOpen ? "Hide Transcript" : "Transcript"}</span>
           {turns.length > 0 && (
-            <span className="bg-white/10 text-white/50 text-[10px] font-mono
-                             px-1.5 py-0.5 rounded-full ml-0.5">
+            <span className={`text-[11px] font-mono px-1.5 py-0.5 rounded-full
+                              ${isTranscriptOpen
+                                ? "bg-white/20 text-white"
+                                : "bg-stone-200 text-stone-600"
+                              }`}>
               {turns.length}
             </span>
           )}
         </button>
       </header>
 
-      {/* ── Main orb + caption area ─────────────────────────────────────── */}
-      <main className="flex-1 flex flex-col items-center justify-center gap-8 px-6 -mt-6">
+      {/* ── Main orb + caption area ─────────────────────────────────────────── */}
+      <main className="flex-1 flex flex-col items-center justify-center gap-5 px-6 overflow-hidden">
         {/* Orb */}
         <div className="relative">
-          {/* Loading spinner ring when thinking */}
           {orbState === "thinking" && (
-            <div className="absolute -inset-4 rounded-full border border-white/10 animate-spin"
+            <div className="absolute -inset-4 rounded-full border border-stone-300 animate-spin"
                  style={{ animationDuration: "3s" }} />
           )}
           <VoiceOrb
             state={orbState}
             amplitudeRef={activeAmplitudeRef as React.RefObject<number>}
-            size={220}
+            size={200}
           />
-          {/* Recording timer badge */}
           {isRecording && (
             <div className="absolute -bottom-8 left-1/2 -translate-x-1/2
                             flex items-center gap-1.5 px-3 py-1 rounded-full
-                            bg-orange-500/20 border border-orange-500/30">
+                            bg-orange-50 border border-orange-200">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <span className="text-[11px] font-mono text-orange-300">
+              <span className="text-[11px] font-mono text-orange-600">
                 {formatDuration(audio.duration)}
               </span>
             </div>
@@ -400,29 +377,29 @@ export function InterviewClient({
         </div>
 
         {/* Status label */}
-        <div className="text-center -mt-2 h-5">
+        <div className="text-center h-5">
           {isLoading && orbState === "thinking" && (
-            <p className="text-[12px] text-white/25 tracking-widest uppercase animate-pulse">
+            <p className="text-[11px] text-stone-400 tracking-widest uppercase animate-pulse">
               Processing
             </p>
           )}
           {isRecording && (
-            <p className="text-[12px] text-orange-400/60 tracking-widest uppercase">
+            <p className="text-[11px] text-orange-500 tracking-widest uppercase">
               {speech.isSupported ? "Listening" : "Recording"}
             </p>
           )}
           {orbState === "speaking" && isAnimatingCaption && (
-            <p className="text-[12px] text-blue-400/60 tracking-widest uppercase">
+            <p className="text-[11px] text-blue-500 tracking-widest uppercase">
               Interviewer
             </p>
           )}
           {orbState === "idle" && !isRecording && !isLoading && canInteract && (
-            <p className="text-[12px] text-white/20 tracking-widest uppercase">
+            <p className="text-[11px] text-stone-300 tracking-widest uppercase">
               Ready
             </p>
           )}
           {!canInteract && !isLoading && (
-            <p className="text-[12px] text-white/20 tracking-widest uppercase animate-pulse">
+            <p className="text-[11px] text-stone-400 tracking-widest uppercase animate-pulse">
               Starting…
             </p>
           )}
@@ -433,112 +410,88 @@ export function InterviewClient({
           previousTurns={previousCaptionTurns}
           currentText={caption}
           currentSpeaker={captionSpeaker}
-          isAnimating={isAnimatingCaption || (speech.isListening)}
+          isAnimating={isAnimatingCaption || speech.isListening}
         />
 
         {/* Error */}
         {error && (
           <div className="w-full max-w-sm mx-auto px-4 py-2.5 rounded-xl
-                          bg-red-500/10 border border-red-500/20">
-            <p className="text-[12px] text-red-400 text-center">{error}</p>
+                          bg-red-50 border border-red-200">
+            <p className="text-[12px] text-red-600 text-center">{error}</p>
           </div>
         )}
       </main>
 
-      {/* ── Text input panel (slides up) ───────────────────────────────── */}
-      <div className={`text-input-panel absolute bottom-[100px] left-0 right-0 px-4
-                       ${isTextInputOpen ? "text-input-visible" : "text-input-hidden"}`}>
-        <div className="max-w-xl mx-auto">
-          <div className="rounded-2xl bg-[#141428] border border-white/10
-                          shadow-2xl overflow-hidden">
-            <textarea
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleTextSubmit(); }
-              }}
-              disabled={isMicDisabled}
-              placeholder="Type your response… (Enter to send)"
-              rows={3}
-              className="w-full resize-none bg-transparent px-4 pt-4 pb-2
-                         text-[15px] text-white/85 placeholder-white/20
-                         focus:outline-none leading-relaxed font-light"
-              autoFocus={isTextInputOpen}
-            />
-            <div className="flex items-center justify-between px-4 pb-3">
-              <span className="text-[11px] text-white/20">Shift+Enter for new line</span>
-              <button
-                onClick={handleTextSubmit}
-                disabled={!textInput.trim() || isMicDisabled}
-                className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-[13px]
-                           font-medium disabled:opacity-30 hover:bg-indigo-500
-                           transition-colors duration-150"
-              >
-                Send
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Controls bar ───────────────────────────────────────────────── */}
-      <nav className="relative z-10 flex items-center justify-between px-10 pb-8 pt-4">
-        {/* Left: keyboard toggle */}
+      {/* ── Text input — persistent collapsible section ─────────────────────── */}
+      <div className="shrink-0 border-t border-stone-200 bg-white">
+        {/* Toggle row */}
         <button
           onClick={() => setIsTextInputOpen((o) => !o)}
-          title={isTextInputOpen ? "Hide keyboard" : "Type instead"}
-          className={`w-11 h-11 rounded-full flex items-center justify-center
-                      border transition-all duration-200
-                      ${isTextInputOpen
-                        ? "border-indigo-500/50 bg-indigo-600/20 text-indigo-400"
-                        : "border-white/10 bg-white/5 text-white/35 hover:text-white/60 hover:border-white/20"
-                      }`}
+          className="w-full flex items-center justify-between px-5 py-3
+                     text-stone-500 hover:text-stone-700 hover:bg-stone-50
+                     transition-colors duration-150"
         >
-          <KeyboardIcon className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            <KeyboardIcon className="w-4 h-4" />
+            <span className="text-[13px] font-medium">Type a response</span>
+          </div>
+          <ChevronIcon className={`w-4 h-4 transition-transform duration-200
+                                   ${isTextInputOpen ? "rotate-180" : ""}`} />
         </button>
 
-        {/* Center: mic button */}
-        <div className="relative flex items-center justify-center">
-          {/* Pulse ring when recording */}
-          {isRecording && (
-            <div className="mic-pulse-ring absolute w-16 h-16 rounded-full
-                            border-2 border-orange-500/40" />
-          )}
+        {/* Collapsible textarea */}
+        {isTextInputOpen && (
+          <div className="px-4 pb-4">
+            <div className="rounded-xl border border-stone-200 bg-stone-50 overflow-hidden">
+              <textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleTextSubmit();
+                  }
+                }}
+                disabled={isMicDisabled}
+                placeholder="Type your response here… (Enter to send, Shift+Enter for new line)"
+                rows={4}
+                className="w-full resize-none bg-transparent px-4 pt-3.5 pb-2
+                           text-[15px] text-stone-800 placeholder-stone-400
+                           focus:outline-none leading-relaxed select-text"
+                autoFocus={isTextInputOpen}
+              />
+              <div className="flex items-center justify-between px-4 pb-3">
+                <span className="text-[11px] text-stone-400">Shift+Enter for new line</span>
+                <button
+                  onClick={handleTextSubmit}
+                  disabled={!textInput.trim() || isMicDisabled}
+                  className="px-5 py-2 rounded-xl bg-stone-800 text-white text-[13px]
+                             font-medium disabled:opacity-30 hover:bg-stone-700
+                             transition-colors duration-150"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
-          <button
-            onClick={handleMicPress}
-            disabled={isMicDisabled}
-            aria-label={isRecording ? "Stop recording" : "Start recording"}
-            className={`relative w-16 h-16 rounded-full flex items-center justify-center
-                        transition-all duration-200 shadow-lg
-                        disabled:opacity-30 disabled:cursor-not-allowed
-                        ${isRecording
-                          ? "bg-orange-500 hover:bg-orange-600 scale-105"
-                          : "bg-white/10 hover:bg-white/18 border border-white/15 hover:border-white/25 hover:scale-105"
-                        }
-                        ${orbState === "thinking" ? "animate-pulse cursor-wait" : ""}
-                      `}
-          >
-            {isRecording ? (
-              <StopIcon className="w-5 h-5 text-white" />
-            ) : (
-              <MicIcon className={`w-5 h-5 ${orbState === "thinking" ? "text-white/30" : "text-white/80"}`} />
-            )}
-          </button>
-        </div>
-
-        {/* Right: mute toggle */}
+      {/* ── Controls bar ────────────────────────────────────────────────────── */}
+      <nav className="relative z-10 flex items-center justify-between
+                      px-10 py-4 bg-white border-t border-stone-200 shrink-0">
+        {/* Left: mute toggle */}
         <button
           onClick={() => {
             if (!isMuted && tts.isSpeaking) tts.stop();
             setIsMuted((m) => !m);
           }}
           title={isMuted ? "Unmute AI voice" : "Mute AI voice"}
-          className={`w-11 h-11 rounded-full flex items-center justify-center
-                      border transition-all duration-200
+          className={`w-13 h-13 w-[52px] h-[52px] rounded-full flex items-center justify-center
+                      border-2 transition-all duration-200
                       ${isMuted
-                        ? "border-red-500/30 bg-red-500/8 text-red-400/60"
-                        : "border-white/10 bg-white/5 text-white/35 hover:text-white/60 hover:border-white/20"
+                        ? "border-red-300 bg-red-50 text-red-500"
+                        : "border-stone-200 bg-stone-50 text-stone-500 hover:text-stone-800 hover:border-stone-400 hover:bg-stone-100"
                       }`}
         >
           {isMuted ? (
@@ -547,9 +500,40 @@ export function InterviewClient({
             <VolumeOnIcon className="w-5 h-5" />
           )}
         </button>
+
+        {/* Center: mic button */}
+        <div className="relative flex items-center justify-center">
+          {isRecording && (
+            <div className="mic-pulse-ring absolute w-[76px] h-[76px] rounded-full
+                            border-2 border-orange-400/60" />
+          )}
+          <button
+            onClick={handleMicPress}
+            disabled={isMicDisabled}
+            aria-label={isRecording ? "Stop recording" : "Start recording"}
+            className={`relative w-[68px] h-[68px] rounded-full flex items-center justify-center
+                        transition-all duration-200 shadow-md
+                        disabled:opacity-30 disabled:cursor-not-allowed
+                        ${isRecording
+                          ? "bg-orange-500 hover:bg-orange-600 scale-105 shadow-orange-200"
+                          : "bg-stone-800 hover:bg-stone-700 hover:scale-105 shadow-stone-200"
+                        }
+                        ${orbState === "thinking" ? "animate-pulse cursor-wait" : ""}
+                      `}
+          >
+            {isRecording ? (
+              <StopIcon className="w-6 h-6 text-white" />
+            ) : (
+              <MicIcon className={`w-6 h-6 ${orbState === "thinking" ? "text-white/40" : "text-white"}`} />
+            )}
+          </button>
+        </div>
+
+        {/* Right: placeholder for visual balance */}
+        <div className="w-[52px] h-[52px]" />
       </nav>
 
-      {/* ── Transcript drawer ───────────────────────────────────────────── */}
+      {/* ── Transcript drawer ────────────────────────────────────────────────── */}
       <TranscriptDrawer
         turns={turns}
         isOpen={isTranscriptOpen}
@@ -595,6 +579,14 @@ function KeyboardIcon({ className }: { className?: string }) {
   );
 }
 
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+    </svg>
+  );
+}
+
 function VolumeOnIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
@@ -610,14 +602,6 @@ function VolumeOffIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
       <line x1="23" y1="9" x2="17" y2="15" strokeLinecap="round" />
       <line x1="17" y1="9" x2="23" y2="15" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function WarningIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
     </svg>
   );
 }
