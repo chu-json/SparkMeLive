@@ -1,6 +1,6 @@
 # SparkMeLive — Qualitative interview MVP
 
-A full-stack web app for running **semi-structured, multi-domain qualitative interviews** with an AI interviewer. Built for internal testing by the Stanford CPI and SALT Lab research teams. The UI and pipeline are **SparkMe-inspired** (agenda manager, exploration planner, interviewer) while the **question protocol** is defined in JSON and can be swapped or edited independently of the code.
+A full-stack web app for running **semi-structured, multi-domain qualitative interviews** with an AI interviewer. Built for internal testing and future field use by the Stanford CPI and SALT Lab research teams. The UI and pipeline are **SparkMe-inspired** (agenda manager, exploration planner, interviewer) while the **question protocol** is defined in JSON and can be swapped or edited independently of the code.
 
 **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase (Postgres + Storage + anonymous auth) · OpenAI-compatible chat API · optional OpenAI TTS · deployable to Vercel
 
