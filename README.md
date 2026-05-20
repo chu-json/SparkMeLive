@@ -5,6 +5,8 @@ A full-stack web app for running **semi-structured, multi-domain qualitative int
 **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase (Postgres + Storage + anonymous auth) · OpenAI-compatible chat API · optional OpenAI TTS · deployable to Vercel
 
 ---
+<img width="1687" height="974" alt="image" src="https://github.com/user-attachments/assets/31ec4042-ef06-4f28-baaa-603bb366555c" />
+
 
 ## What participants see
 
