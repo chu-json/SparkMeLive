@@ -10,6 +10,12 @@ interface AdminContentProps {
   interviews: Interview[];
   exports: InterviewExport[];
   turnCounts: Record<string, number>;
+  /**
+   * The study_id this browser session is currently authenticated as, if any.
+   * Used to make the "Login as" flow transparent — the admin can see at a
+   * glance which participant their cookies are pointing at.
+   */
+  currentSignedInAs?: string | null;
 }
 
 interface StatusCheck {
@@ -27,6 +33,7 @@ export function AdminContent({
   interviews: initialInterviews,
   exports: exportRecords,
   turnCounts,
+  currentSignedInAs,
 }: AdminContentProps) {
   const router = useRouter();
 
@@ -234,12 +241,21 @@ export function AdminContent({
 
       {/* ── Header ────────────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-stone-200 px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
           <div>
             <h1 className="text-lg font-semibold text-stone-900">Interview Admin</h1>
             <p className="text-xs text-stone-400 mt-0.5">Internal developer dashboard</p>
           </div>
           <div className="flex items-center gap-5">
+            {currentSignedInAs && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full
+                              bg-emerald-50 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[11px] text-emerald-700">
+                  Signed in as <span className="font-mono font-semibold">{currentSignedInAs}</span>
+                </span>
+              </div>
+            )}
             <div className="flex gap-4 text-xs text-stone-500">
               <span>{participants.length} participants</span>
               <span>{interviews.length} interviews</span>
@@ -399,14 +415,31 @@ export function AdminContent({
                           {new Date(participant.created_at).toLocaleDateString()}
                         </span>
 
-                        {/* Login link pre-filled with study_id */}
-                        <a
-                          href={`/login?id=${encodeURIComponent(participant.study_id)}`}
-                          className="text-xs text-stone-500 hover:text-stone-800
-                                     underline underline-offset-2 transition-colors"
-                        >
-                          Login as →
-                        </a>
+                        {/* Login link pre-filled with study_id.
+                            When the admin is already signed in as this
+                            participant we render it as an "Open" link so it
+                            doesn't masquerade as an action that does nothing. */}
+                        {currentSignedInAs === participant.study_id ? (
+                          <span className="text-xs text-emerald-700 font-medium
+                                           flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                            Active session
+                          </span>
+                        ) : (
+                          <a
+                            href={`/login?id=${encodeURIComponent(participant.study_id)}`}
+                            className="text-xs text-stone-700 hover:text-stone-900
+                                       underline underline-offset-2 transition-colors
+                                       font-medium"
+                            title={
+                              currentSignedInAs
+                                ? `Switch from ${currentSignedInAs} to ${participant.study_id}`
+                                : `Sign in as ${participant.study_id}`
+                            }
+                          >
+                            Login as →
+                          </a>
+                        )}
 
                         {/* Delete / Confirm */}
                         {isConfirming ? (

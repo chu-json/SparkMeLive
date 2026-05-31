@@ -1,33 +1,46 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, useRef, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 
-export function LoginForm({ defaultStudyId = "" }: { defaultStudyId?: string }) {
-  const [studyId, setStudyId] = useState(defaultStudyId);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+interface LoginFormProps {
+  defaultStudyId?: string;
+  /**
+   * When true, the form auto-submits as soon as it mounts. Used by the admin
+   * "Login as" flow — the admin already chose the participant via the
+   * dashboard, so a second click on this page is just friction.
+   */
+  autoSubmit?: boolean;
+}
+
+export function LoginForm({ defaultStudyId = "", autoSubmit = false }: LoginFormProps) {
+  const [studyId, setStudyId]   = useState(defaultStudyId);
+  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submitLockRef = useRef(false);
+
+  const doLogin = async (id: string) => {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setError(null);
 
-    if (!studyId.trim()) {
+    if (!id.trim()) {
       setError("Please enter your participant ID.");
+      submitLockRef.current = false;
       return;
     }
 
     setLoading(true);
 
     try {
-      // Call login API
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ study_id: studyId.trim() }),
+        body: JSON.stringify({ study_id: id.trim() }),
       });
 
       const data = await res.json();
@@ -37,22 +50,57 @@ export function LoginForm({ defaultStudyId = "" }: { defaultStudyId?: string }) 
         return;
       }
 
-      // Set Supabase session client-side using the returned tokens
+      // setSession() REPLACES whatever session the browser currently holds —
+      // important for the admin "Login as" flow where we're switching out of
+      // a different participant's session.
       const supabase = createClient();
       await supabase.auth.setSession({
         access_token: data.access_token,
         refresh_token: data.refresh_token,
       });
 
-      // Navigate to the interview
       router.push(`/interview/${data.interview_id}`);
       router.refresh();
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
+      submitLockRef.current = false;
     }
   };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    void doLogin(studyId);
+  };
+
+  // Auto-submit when an ID has been pre-filled via ?id= (admin "Login as").
+  // Fires exactly once per mount thanks to submitLockRef.
+  useEffect(() => {
+    if (!autoSubmit) return;
+    if (!defaultStudyId.trim()) return;
+    void doLogin(defaultStudyId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // While auto-submitting, show a friendlier "Signing in as X…" panel instead
+  // of the empty form, so the admin understands what is happening.
+  if (autoSubmit && defaultStudyId.trim() && !error) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3 rounded-lg bg-stone-100 px-4 py-3
+                        border border-stone-200">
+          <Spinner className="w-4 h-4 text-stone-500" />
+          <p className="text-sm text-stone-700">
+            Signing in as <span className="font-mono font-semibold">{defaultStudyId}</span>…
+          </p>
+        </div>
+        <p className="text-xs text-stone-400 text-center">
+          Switching sessions from the admin dashboard.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -100,5 +148,14 @@ export function LoginForm({ defaultStudyId = "" }: { defaultStudyId?: string }) 
         {loading ? "Signing in..." : "Begin Interview"}
       </Button>
     </form>
+  );
+}
+
+function Spinner({ className }: { className?: string }) {
+  return (
+    <svg className={`animate-spin ${className ?? ""}`} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+      <path d="M22 12a10 10 0 01-10 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -10,6 +10,9 @@ interface LoginPageProps {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const { id } = await searchParams;
+  // A pre-filled `?id=` query param is the admin "Login as" signal — auto-submit
+  // so the dashboard's one-click flow actually finishes without a second tap.
+  const autoSubmit = Boolean(id?.trim());
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 bg-stone-50">
@@ -41,7 +44,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         {/* Login card */}
         <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-8">
-          <LoginForm defaultStudyId={id ?? ""} />
+          <LoginForm defaultStudyId={id ?? ""} autoSubmit={autoSubmit} />
         </div>
 
         {/* Footer note */}

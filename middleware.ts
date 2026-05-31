@@ -45,10 +45,20 @@ export async function middleware(request: NextRequest) {
 
   // If user is already authenticated and hits /login, redirect to their session
   // (Admin route is intentionally NOT redirected — developers access it directly)
+  //
+  // EXCEPTION: when /login carries a `?id=` query string we treat that as an
+  // explicit "switch participant" intent (admin "Login as" link). Letting it
+  // through means the LoginForm can auto-submit with the requested study_id
+  // and `setSession()` will replace the current session in place — without
+  // this exception the redirect to `/` would send the admin back to whichever
+  // participant their browser is currently signed in as.
   if (pathname === "/login" && user) {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    return NextResponse.redirect(homeUrl);
+    const hasIdParam = request.nextUrl.searchParams.has("id");
+    if (!hasIdParam) {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      return NextResponse.redirect(homeUrl);
+    }
   }
 
   return supabaseResponse;

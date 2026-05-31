@@ -9,9 +9,24 @@ A full-stack web app for running **semi-structured, multi-domain qualitative int
 ## What participants see
 
 - **Login** (`/login`) — enter a study ID (anonymous Supabase session). Admins can link to `/login?id=YOUR_STUDY_ID` to pre-fill the field.
-- **Interview** (`/interview/[id]`) — voice orb, optional **typed** replies, live captions, slide-out **transcript** (on by default), **mute** for AI voice, and **Begin Interview** on first visit so browser audio autoplay rules are satisfied before TTS runs.
+- **Interview** (`/interview/[id]`) — voice orb, optional **typed** replies, live captions, slide-out **transcript** (on by default), **mute** for AI voice, a **voice mode toggle** (Hands-free / Push to Talk), and **Begin Interview** on first visit so browser audio autoplay rules are satisfied before TTS runs.
 - **Export during the interview** — download icon in the **bottom-right** of the control bar saves a `.txt` of the conversation so far (speakers + timestamps), built in the browser from the live transcript.
 - **Complete** (`/complete?interview_id=…`) — thank-you page with optional server-generated exports when Storage is configured (see [Exports](#exports)).
+
+### Voice modes
+
+Both modes are surfaced as a segmented pill in the interview header; the choice is remembered per browser via `localStorage`.
+
+- **Hands-free (default).** The mic stays live for the whole session. A continuous Web Audio `AnalyserNode` plus the Web Speech API drive endpoint detection — the AI auto-replies once the participant pauses, with a dynamic silence window that lengthens after fillers ("um", "uh"), conjunctions ("and", "but", "so"), and short utterances, and shortens after clear sentence terminators (`.`, `?`, `!`). The center control is a Zoom-style **Mute / Unmute** button (red when muted, emerald when live). Speaking over the AI **interrupts it** (barge-in), and speaking again **before** the next AI response begins **aborts the in-flight request** and rolls the previous text back into your turn so the next utterance is the combined answer.
+- **Push to Talk.** The original tap-to-record flow: tap the orange record button, speak, tap again to stop and submit. Use this in noisy environments or when participants want to deliberate without the AI jumping in.
+
+### Talking-while-muted detection
+
+In Hands-free mode the AnalyserNode keeps running even when the mic is muted. If the participant speaks audibly for ≥800 ms while muted we surface a one-shot, Zoom-style toast (`You're talking, but you're muted`) with a one-tap **Unmute** action. It only ever appears once per session to avoid being annoying.
+
+### Permissions
+
+When the participant clicks **Begin Interview** (the guaranteed user gesture) we unlock the `AudioContext` for TTS playback **and** call `getUserMedia` so the browser's mic-permission prompt appears once, up-front. Hands-free mode keeps the resulting `MediaStream` open for the whole session; Push-to-Talk mode releases it after warm-up and re-opens on each record press.
 
 ---
 
@@ -61,7 +76,7 @@ lib/
 ├── interview/
 │   ├── engine.ts          Turn loop: planner + interviewer + completion checks
 │   └── export.ts          JSON + plain-text transcript (+ optional Storage)
-├── hooks/                 Speech, recording, TTS (including AudioContext unlock)
+├── hooks/                 Speech, recording, TTS, continuous voice (Hands-free)
 ├── supabase/              Browser + server Supabase clients
 ├── transcribe/            AWS Transcribe stub (future)
 └── types/index.ts         Shared TypeScript types

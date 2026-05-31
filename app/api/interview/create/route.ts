@@ -96,6 +96,26 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (turnError) {
+      // Race condition: in dev, React StrictMode double-invokes the mount
+      // effect so two POSTs land here simultaneously. Both pass the
+      // existingTurn check (neither has inserted yet) and the loser trips
+      // the (interview_id, turn_index) unique constraint with code 23505.
+      // Recover by reading back the row the winner just wrote and
+      // returning the standard 409 shape so the client behaves identically.
+      if (turnError.code === "23505") {
+        const { data: refetched } = await supabase
+          .from("transcript_turns")
+          .select("id, text")
+          .eq("interview_id", interview.id)
+          .eq("turn_index", 0)
+          .maybeSingle();
+        if (refetched) {
+          return NextResponse.json(
+            { interview, opening_question: refetched.text, turn_id: refetched.id },
+            { status: 409 }
+          );
+        }
+      }
       console.error("[interview/create] opening turn error:", turnError);
     }
 

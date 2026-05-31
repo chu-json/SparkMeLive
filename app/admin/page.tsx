@@ -8,8 +8,14 @@
 
 // Force dynamic rendering — admin data must never be served stale from cache.
 export const dynamic = "force-dynamic";
+// Belt-and-braces: also disable Next's Data Cache for every fetch in this
+// render so newly-created participants never appear "missing" after a reload
+// just because a stale render slipped through.
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
-import { createServiceClient } from "@/lib/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { AdminContent } from "./AdminContent";
 import type { Participant, Interview, InterviewExport } from "@/lib/types";
 
@@ -19,7 +25,27 @@ export const metadata = {
 };
 
 export default async function AdminPage() {
+  noStore();
   const supabase = createServiceClient();
+
+  // Capture the study_id the admin's browser is *currently* signed in as so
+  // the dashboard can show it. This makes the "Login as" flow transparent —
+  // you can see at a glance which participant the cookies are pointing at.
+  let currentSignedInAs: string | null = null;
+  try {
+    const ssr = await createClient();
+    const { data: { user } } = await ssr.auth.getUser();
+    if (user) {
+      const { data: me } = await supabase
+        .from("participants")
+        .select("study_id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      currentSignedInAs = (me as { study_id?: string } | null)?.study_id ?? null;
+    }
+  } catch {
+    // Non-fatal — admin still works without this hint.
+  }
 
   const [
     { data: participants },
@@ -55,6 +81,7 @@ export default async function AdminPage() {
       interviews={(interviews ?? []) as Interview[]}
       exports={(exports ?? []) as InterviewExport[]}
       turnCounts={turnCounts}
+      currentSignedInAs={currentSignedInAs}
     />
   );
 }
