@@ -202,7 +202,9 @@ See `lib/types/index.ts` — `participant_id`, `study_id`, `interview_id`, `mode
 
 1. Push the repo to GitHub.
 2. Import in [Vercel](https://vercel.com/new) as a Next.js project.
-3. Add the same env vars as production (including `NEXT_PUBLIC_APP_URL` for your deployment URL if you use it).
+3. Add the same env vars as production (including `NEXT_PUBLIC_APP_URL` for your deployment URL if you use it). **Don't forget the optional TTS / AWS keys** — they are NOT auto-copied from your local `.env`:
+   - `OPENAI_TTS_API_KEY` (+ `OPENAI_TTS_MODEL`, `OPENAI_TTS_VOICE` if customised) — without this the AI uses the browser's built-in `SpeechSynthesis` voice on the deployed site, and **the voice selector in the header will have no effect** (a small "fallback voice" badge appears next to it as a hint).
+   - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_TRANSCRIBE_BUCKET` — without these the app falls back to Web Speech for transcription.
 
 Serverless functions default to a **10s** timeout on the Hobby plan; LLM calls in `/api/interview/turn` can exceed that. Consider Pro (longer limit), a faster model, or moving generation to a background worker for heavy use.
 

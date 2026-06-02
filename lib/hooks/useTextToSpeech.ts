@@ -32,6 +32,13 @@ export interface TTSState {
   ttsAmplitudeRef: React.RefObject<number>;
   /** Duration of the last audio response in seconds (0 if unknown) */
   lastAudioDuration: number;
+  /** Which TTS tier the hook has settled on:
+   *   - "unknown" before the first speak()/preview attempt
+   *   - "api"     when the server route is configured and responding
+   *   - "browser" when the server route returned 503/error and we are using
+   *               window.speechSynthesis (which IGNORES the `voice` arg, so the
+   *               UI should disable / warn about the voice dropdown) */
+  mode: TTSMode;
 }
 
 export interface TTSControls {
@@ -52,7 +59,7 @@ export interface TTSControls {
   previewVoice: (voice: string) => Promise<number>;
 }
 
-type TTSMode = "api" | "browser" | "unknown";
+export type TTSMode = "api" | "browser" | "unknown";
 
 /**
  * React hook for Text-to-Speech with two tiers:
@@ -76,6 +83,14 @@ export function useTextToSpeech(): TTSState & TTSControls {
 
   const ttsAmplitudeRef = useRef<number>(0);
   const modeRef         = useRef<TTSMode>("unknown");
+  // Mirrored as state so consumers can re-render (e.g. show a "browser fallback"
+  // hint next to the voice dropdown). Always kept in sync with `modeRef`.
+  const [mode, setMode] = useState<TTSMode>("unknown");
+  const updateMode = useCallback((next: TTSMode) => {
+    if (modeRef.current === next) return;
+    modeRef.current = next;
+    setMode(next);
+  }, []);
 
   // Web Audio refs (API tier)
   const audioCtxRef     = useRef<AudioContext | null>(null);
@@ -191,9 +206,9 @@ export function useTextToSpeech(): TTSState & TTSControls {
     setIsSpeaking(true);
     setLastAudioDuration(duration);
     startAmplitudeLoop();
-    modeRef.current = "api";
+    updateMode("api");
     return duration;
-  }, [startAmplitudeLoop]);
+  }, [startAmplitudeLoop, updateMode]);
 
   const fetchTTSAudio = useCallback(
     async (text: string, voice?: string, signal?: AbortSignal): Promise<ArrayBuffer | null> => {
@@ -205,12 +220,12 @@ export function useTextToSpeech(): TTSState & TTSControls {
       });
 
       if (!res.ok) {
-        if (res.status === 503) modeRef.current = "browser";
+        if (res.status === 503) updateMode("browser");
         return null;
       }
       return res.arrayBuffer();
     },
-    []
+    [updateMode]
   );
 
   const speakViaAPI = useCallback(async (text: string, voice?: string): Promise<number> => {
@@ -296,18 +311,18 @@ export function useTextToSpeech(): TTSState & TTSControls {
       const duration = await speakViaAPI(text, voice);
       if (duration > 0) return duration;
       // API unavailable — fall through to browser
-      modeRef.current = "browser";
+      updateMode("browser");
     }
 
     if (modeRef.current === "api") {
       const duration = await speakViaAPI(text, voice);
       if (duration > 0) return duration;
-      modeRef.current = "browser"; // API failed mid-session, fall back
+      updateMode("browser"); // API failed mid-session, fall back
     }
 
     // Browser fallback
     return speakViaBrowser(text);
-  }, [stopAll, speakViaAPI, speakViaBrowser]);
+  }, [stopAll, speakViaAPI, speakViaBrowser, updateMode]);
 
   // ── unlock() — must be called synchronously in a gesture handler ─────────
   // Creates / resumes the AudioContext while still inside Chrome's
@@ -331,6 +346,7 @@ export function useTextToSpeech(): TTSState & TTSControls {
     isSpeaking,
     ttsAmplitudeRef: ttsAmplitudeRef as React.RefObject<number>,
     lastAudioDuration,
+    mode,
     speak,
     stop,
     unlock,

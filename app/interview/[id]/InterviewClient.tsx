@@ -54,6 +54,11 @@ export function InterviewClient({
   const [textInput, setTextInput]               = useState("");
   const [isMuted, setIsMuted]                   = useState(false);
   const [voice, setVoice]                       = useState<string>(DEFAULT_TTS_VOICE);
+  // Shown briefly after the user changes the voice while the AI is mid-sentence
+  // (we deliberately don't cut off the AI in that case — the change applies to
+  // the next interviewer turn instead).
+  const [voiceChangeHint, setVoiceChangeHint]   = useState<string | null>(null);
+  const voiceHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Persist the chosen AI voice across reloads
   useEffect(() => {
@@ -332,8 +337,29 @@ export function InterviewClient({
 
     if (isMuted || isLoading) return;
 
+    // If the AI is currently speaking the interview turn, do NOT cut it off
+    // to play a preview — that was the source of the "voice change kills the
+    // AI mid-sentence" bug. Just record the new voice; it applies on the next
+    // interviewer turn. Show a brief inline hint so the user knows.
+    const aiIsSpeaking = isAnimatingCaption || orbState === "speaking" || tts.isSpeaking;
+    if (aiIsSpeaking) {
+      if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
+      setVoiceChangeHint("Voice will change on the next response");
+      voiceHintTimerRef.current = setTimeout(() => setVoiceChangeHint(null), 3500);
+      return;
+    }
+
+    // If we already know the server TTS route is unavailable, skip the preview
+    // entirely — browser SpeechSynthesis ignores the requested voice and would
+    // just play the same fallback voice, which is confusing UX.
+    if (tts.mode === "browser") {
+      if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
+      setVoiceChangeHint("Browser fallback in use — selected voice can't be previewed");
+      voiceHintTimerRef.current = setTimeout(() => setVoiceChangeHint(null), 3500);
+      return;
+    }
+
     if (voicePreviewTimerRef.current) clearTimeout(voicePreviewTimerRef.current);
-    tts.stop();
 
     // Debounce rapid dropdown changes — each preview is a TTS API call (~1–5s).
     // Cached after the first play per voice so re-selecting is instant.
@@ -341,11 +367,12 @@ export function InterviewClient({
       setOrbState("speaking");
       void tts.previewVoice(newVoice);
     }, 350);
-  }, [isMuted, isLoading, tts]);
+  }, [isMuted, isLoading, isAnimatingCaption, orbState, tts]);
 
   useEffect(() => {
     return () => {
       if (voicePreviewTimerRef.current) clearTimeout(voicePreviewTimerRef.current);
+      if (voiceHintTimerRef.current) clearTimeout(voiceHintTimerRef.current);
     };
   }, []);
 
@@ -603,7 +630,11 @@ export function InterviewClient({
             className="relative flex items-center gap-1.5 pl-2.5 pr-1 py-1.5 rounded-full
                        border border-stone-200 bg-stone-50 text-stone-500
                        hover:border-stone-400 hover:bg-stone-100 transition-colors duration-150"
-            title="Choose the interviewer's voice"
+            title={
+              tts.mode === "browser"
+                ? "Browser fallback voice in use — set OPENAI_TTS_API_KEY on the server to enable selectable voices"
+                : "Choose the interviewer's voice"
+            }
           >
             <VoiceSelectIcon className="w-4 h-4 shrink-0" />
             <select
@@ -621,6 +652,31 @@ export function InterviewClient({
             </select>
             <ChevronIcon className="w-3.5 h-3.5 rotate-180 absolute right-2 pointer-events-none text-stone-400" />
           </label>
+
+          {/* Persistent fallback indicator — only when the server TTS route is
+              unavailable. Clarifies why the dropdown doesn't seem to change
+              anything (browser SpeechSynthesis ignores the selected voice). */}
+          {tts.mode === "browser" && (
+            <span
+              className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                         bg-amber-50 border border-amber-200 text-amber-700
+                         text-[10px] font-mono uppercase tracking-widest"
+              title="The server TTS route returned 503 (no OPENAI_TTS_API_KEY). Falling back to your browser's built-in voice, which ignores the voice selector."
+            >
+              fallback voice
+            </span>
+          )}
+
+          {/* Transient hint — voice change happened during AI speech or while
+              in browser-fallback mode; we deliberately didn't interrupt. */}
+          {voiceChangeHint && (
+            <span
+              className="text-[11px] text-stone-500 transition-opacity duration-200"
+              role="status"
+            >
+              {voiceChangeHint}
+            </span>
+          )}
         </div>
 
         {/* Center: title */}
