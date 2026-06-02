@@ -13,8 +13,15 @@ export interface AudioRecorderState {
 }
 
 export interface AudioRecorderControls {
-  startRecording: () => Promise<void>;
-  stopRecording: (interviewId: string) => void;
+  /** Returns true if recording actually started, false on any failure */
+  startRecording: () => Promise<boolean>;
+  /**
+   * Stop the active recording.
+   * Returns a Promise that resolves with the complete audio Blob once the
+   * MediaRecorder has flushed all data. The Supabase upload continues in the
+   * background — callers don't need to await it.
+   */
+  stopRecording: (interviewId: string) => Promise<Blob>;
   resetRecorder: () => void;
 }
 
@@ -46,7 +53,7 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
   const ampRafRef          = useRef<number>(0);
   const streamRef          = useRef<MediaStream | null>(null);
 
-  const startRecording = useCallback(async () => {
+  const startRecording = useCallback(async (): Promise<boolean> => {
     setError(null);
     chunksRef.current = [];
 
@@ -56,7 +63,7 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
         "Microphone access is not available. Please ensure you are on a secure (HTTPS) connection and use a supported browser (Chrome, Safari, Firefox)."
       );
       setRecorderState("error");
-      return;
+      return false;
     }
 
     // Guard: MediaRecorder is not available on all browsers (e.g. Firefox for iOS)
@@ -65,7 +72,7 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
         "Audio recording is not supported in this browser. Please try Chrome or Safari."
       );
       setRecorderState("error");
-      return;
+      return false;
     }
 
     let stream: MediaStream;
@@ -86,7 +93,7 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
         setError("Could not access the microphone. Please check your browser settings.");
       }
       setRecorderState("error");
-      return;
+      return false;
     }
 
     // Set up Web Audio amplitude tracking
@@ -139,9 +146,11 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
     timerRef.current = setInterval(() => {
       setDuration((d) => d + 1);
     }, 1000);
+
+    return true;
   }, []);
 
-  const stopRecording = useCallback((interviewId: string) => {
+  const stopRecording = useCallback((interviewId: string): Promise<Blob> => {
     // Stop timers and cleanup
     if (timerRef.current) clearInterval(timerRef.current);
     cancelAnimationFrame(ampRafRef.current);
@@ -152,35 +161,43 @@ export function useAudioRecorder(): AudioRecorderState & AudioRecorderControls {
     analyserRef.current = null;
 
     const recorder = mediaRecorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
+    if (!recorder || recorder.state === "inactive") {
+      return Promise.resolve(new Blob([], { type: "audio/webm" }));
+    }
 
     setRecorderState("uploading");
 
-    recorder.onstop = async () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+    return new Promise<Blob>((resolve) => {
+      recorder.onstop = async () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
 
-      const mimeType = recorder.mimeType || "audio/webm";
-      const blob = new Blob(chunksRef.current, { type: mimeType });
-      const ext  = mimeType.includes("ogg") ? "ogg"
-                 : mimeType.includes("mp4") ? "mp4"
-                 : "webm";
-      const file = new File([blob], `recording.${ext}`, { type: mimeType });
+        const mimeType = recorder.mimeType || "audio/webm";
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const ext  = mimeType.includes("ogg") ? "ogg"
+                   : mimeType.includes("mp4") ? "mp4"
+                   : "webm";
 
-      const formData = new FormData();
-      formData.append("audio", file);
-      formData.append("interview_id", interviewId);
+        // Resolve immediately so the caller can start transcription
+        resolve(blob);
 
-      try {
-        const res = await fetch("/api/audio/upload", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Upload failed");
-        setRecorderState("uploaded");
-      } catch {
-        setError("Audio upload failed — your text responses are still saved.");
-        setRecorderState("error");
-      }
-    };
+        // Upload to Supabase for archival in the background
+        const file = new File([blob], `recording.${ext}`, { type: mimeType });
+        const formData = new FormData();
+        formData.append("audio", file);
+        formData.append("interview_id", interviewId);
 
-    recorder.stop();
+        try {
+          const res = await fetch("/api/audio/upload", { method: "POST", body: formData });
+          if (!res.ok) throw new Error("Upload failed");
+          setRecorderState("uploaded");
+        } catch {
+          setError("Audio upload failed — your text responses are still saved.");
+          setRecorderState("error");
+        }
+      };
+
+      recorder.stop();
+    });
   }, []);
 
   const resetRecorder = useCallback(() => {

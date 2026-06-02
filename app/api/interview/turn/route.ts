@@ -18,7 +18,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
-  generateInterviewerResponse,
+  generateInterviewerQuestion,
   shouldCompleteInterview,
   initAgentState,
 } from "@/lib/interview/engine";
@@ -109,7 +109,6 @@ export async function POST(req: NextRequest) {
     );
 
     let interviewerQuestion: string;
-    let updatedState: AgentState = currentState;
 
     if (isComplete) {
       interviewerQuestion =
@@ -117,23 +116,16 @@ export async function POST(req: NextRequest) {
         "This has been a meaningful conversation, and I'm grateful for your time and openness. " +
         "The interview is now complete. You can download your transcript below.";
     } else {
-      // ── 7. Find the last interviewer question for the Agenda Manager ────────
-      // We need it to give the memory agent context on what was being asked.
-      const lastInterviewerTurn = [...(history as TranscriptTurn[])]
-        .reverse()
-        .find((t) => t.speaker === "interviewer");
-      const latestQuestion = lastInterviewerTurn?.text ?? "";
-
-      // ── 8. Run SparkMe 3-agent pipeline ─────────────────────────────────────
-      const result = await generateInterviewerResponse(
-        latestQuestion,
-        text,
+      // ── 7. Generate the next question — the ONLY LLM call on the critical ───
+      // path. It uses the AgentState computed by the previous turn's background
+      // analysis (/api/interview/analyze). The heavy Agenda Manager + Planner
+      // agents no longer run here, so the participant only waits for one call.
+      const output = await generateInterviewerQuestion(
         history as TranscriptTurn[],
         avpProtocol as Protocol,
         currentState
       );
-      interviewerQuestion = result.output.question;
-      updatedState = result.updatedState;
+      interviewerQuestion = output.question;
     }
 
     const questionNow = new Date().toISOString();
@@ -157,14 +149,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to save question" }, { status: 500 });
     }
 
-    // ── 10. Persist updated agent state + handle completion ─────────────────
-    const interviewUpdate: Record<string, unknown> = { agent_state: updatedState };
+    // ── 10. Persist completion if reached ───────────────────────────────────
+    // NOTE: interviews.agent_state is owned by /api/interview/analyze, which the
+    // client fires right after this response. We deliberately do NOT write it
+    // here to avoid clobbering the background analysis with stale state.
     if (isComplete) {
-      interviewUpdate.completed = true;
-      interviewUpdate.ended_at = new Date().toISOString();
+      await supabase
+        .from("interviews")
+        .update({ completed: true, ended_at: new Date().toISOString() })
+        .eq("id", interviewId);
     }
-
-    await supabase.from("interviews").update(interviewUpdate).eq("id", interviewId);
 
     return NextResponse.json({
       interviewee_turn: intervieweeTurn,

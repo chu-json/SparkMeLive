@@ -33,6 +33,8 @@ interface LLMProvider {
 interface CompletionOptions {
   maxTokens?: number;
   temperature?: number;
+  /** Override the model for this call (e.g. a faster model for background agents) */
+  model?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +55,7 @@ class OpenAICompatibleProvider implements LLMProvider {
 
   async complete(messages: LLMMessage[], options: CompletionOptions = {}): Promise<string> {
     const response = await this.client.chat.completions.create({
-      model: this.model,
+      model: options.model ?? this.model,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: options.maxTokens ?? 500,
       temperature: options.temperature ?? 0.7,
@@ -82,7 +84,12 @@ function getProvider(): LLMProvider {
 
 /**
  * Make a raw LLM call and return the response text.
- * Used by the Agenda Manager and Exploration Planner agents.
+ * Used by the background analysis agents (Agenda Manager + Exploration Planner).
+ *
+ * These run off the user's critical path, so they default to a faster/cheaper
+ * model (OPENAI_AGENT_MODEL, e.g. gpt-4o-mini) to keep state ready before the
+ * next turn. The main interviewer voice (generateNextQuestion) keeps the higher
+ * quality OPENAI_MODEL (e.g. gpt-4.1).
  *
  * @param messages   Ordered list of system/user/assistant messages
  * @param maxTokens  Token budget for the response (default 1200)
@@ -93,7 +100,11 @@ export async function callLLM(
   maxTokens = 1200,
   temperature = 0.3
 ): Promise<string> {
-  return getProvider().complete(messages, { maxTokens, temperature });
+  return getProvider().complete(messages, {
+    maxTokens,
+    temperature,
+    model: process.env.OPENAI_AGENT_MODEL ?? "gpt-4o-mini",
+  });
 }
 
 // ---------------------------------------------------------------------------

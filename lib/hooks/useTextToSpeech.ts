@@ -2,6 +2,30 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
+/** A selectable OpenAI voice with a human-friendly label for the UI dropdown.
+ *  These ids must match VALID_VOICES in app/api/tts/route.ts. */
+export interface VoiceOption {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export const TTS_VOICE_OPTIONS: VoiceOption[] = [
+  { id: "nova",    label: "Nova",    description: "Warm, expressive — female" },
+  { id: "coral",   label: "Coral",   description: "Friendly, bright — female" },
+  { id: "shimmer", label: "Shimmer", description: "Soft, gentle — female" },
+  { id: "sage",    label: "Sage",    description: "Calm, soothing — female" },
+  { id: "alloy",   label: "Alloy",   description: "Neutral, balanced" },
+  { id: "ash",     label: "Ash",     description: "Warm, conversational — male" },
+  { id: "echo",    label: "Echo",    description: "Steady, clear — male" },
+  { id: "onyx",    label: "Onyx",    description: "Deep, grounded — male" },
+  { id: "verse",   label: "Verse",   description: "Lively, animated — male" },
+  { id: "ballad",  label: "Ballad",  description: "Gentle storyteller" },
+  { id: "fable",   label: "Fable",   description: "Expressive narrator" },
+];
+
+export const DEFAULT_TTS_VOICE = "nova";
+
 export interface TTSState {
   isSupported: boolean;
   isSpeaking: boolean;
@@ -13,9 +37,10 @@ export interface TTSState {
 }
 
 export interface TTSControls {
-  /** Speak text. Returns the audio duration in seconds once the audio starts
-   *  playing (resolves to 0 on failure so callers can handle gracefully). */
-  speak: (text: string) => Promise<number>;
+  /** Speak text with an optional OpenAI voice id (see TTS_VOICE_OPTIONS).
+   *  Returns the audio duration in seconds once the audio starts playing
+   *  (resolves to 0 on failure so callers can handle gracefully). */
+  speak: (text: string, voice?: string) => Promise<number>;
   stop: () => void;
   /**
    * Call this synchronously inside a user-gesture handler (click/keydown)
@@ -130,12 +155,12 @@ export function useTextToSpeech(): TTSState & TTSControls {
 
   // ── Tier 1: OpenAI TTS via API route ─────────────────────────────────────
 
-  const speakViaAPI = useCallback(async (text: string): Promise<number> => {
+  const speakViaAPI = useCallback(async (text: string, voice?: string): Promise<number> => {
     try {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(voice ? { text, voice } : { text }),
       });
 
       if (!res.ok) {
@@ -227,20 +252,20 @@ export function useTextToSpeech(): TTSState & TTSControls {
 
   // ── Public speak() ────────────────────────────────────────────────────────
 
-  const speak = useCallback(async (text: string): Promise<number> => {
+  const speak = useCallback(async (text: string, voice?: string): Promise<number> => {
     if (!text.trim()) return 0;
     stopAll();
 
     // First call: probe the API to detect which mode to use
     if (modeRef.current === "unknown") {
-      const duration = await speakViaAPI(text);
+      const duration = await speakViaAPI(text, voice);
       if (duration > 0) return duration;
       // API unavailable — fall through to browser
       modeRef.current = "browser";
     }
 
     if (modeRef.current === "api") {
-      const duration = await speakViaAPI(text);
+      const duration = await speakViaAPI(text, voice);
       if (duration > 0) return duration;
       modeRef.current = "browser"; // API failed mid-session, fall back
     }

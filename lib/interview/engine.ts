@@ -1,22 +1,23 @@
 // =============================================================================
-// Interview Engine — SparkMe 3-Agent Pipeline
+// Interview Engine — SparkMe Agents (latency-optimized split)
 //
-// Orchestrates three agents per turn, mirroring SparkMe's architecture:
+// The SparkMe agents are split across two phases so the participant only ever
+// waits for ONE LLM call:
 //
-//   1. Agenda Manager  (lib/prompts/memory.ts)
-//      - Updates per-probe coverage notes after the latest interviewee turn
-//      - Updates the participant portrait with new facts and insights
-//      - Refreshes session summary every SUMMARY_INTERVAL turns
+//   CRITICAL PATH (blocks the reply) — generateInterviewerQuestion():
+//     3. Interviewer  (lib/prompts/interviewer.ts + generateNextQuestion.ts)
+//        Single LLM call on the high-quality model to produce the next question,
+//        using the AgentState computed by the PREVIOUS turn's analysis.
 //
-//   2. Exploration Planner  (lib/prompts/planner.ts)
-//      - Evaluates coverage gaps and emergence potential
-//      - Returns priority-ranked strategic questions (U = α·Coverage − β·Cost + γ·Emergence)
+//   BACKGROUND (after the reply, via /api/interview/analyze) —
+//   computeUpdatedAgentState():
+//     1. Agenda Manager  (lib/prompts/memory.ts) — coverage notes + portrait
+//        + periodic session summary (2 parallel LLM calls).
+//     2. Exploration Planner (lib/prompts/planner.ts) — priority-ranked
+//        strategic questions (U = α·Coverage − β·Cost + γ·Emergence).
+//     These run on the faster OPENAI_AGENT_MODEL and feed the NEXT turn.
 //
-//   3. Interviewer  (lib/prompts/interviewer.ts + lib/llm/generateNextQuestion.ts)
-//      - Assembles the full SparkMe INTERVIEW_PROMPT with all agent outputs
-//      - Runs the main LLM call to produce the next conversational question
-//
-// Total LLM calls per turn: 3  (2 parallel agent calls + 1 interviewer call)
+// Critical-path LLM calls per turn: 1  (down from 3).
 // =============================================================================
 
 import type { TranscriptTurn, GenerateQuestionOutput, AgentState } from "@/lib/types";
@@ -39,30 +40,56 @@ export function getOpeningMessage(): string {
 }
 
 /**
- * Run the full SparkMe 3-agent pipeline for one interviewer turn.
+ * Generate the next interviewer question — the ONLY LLM call on the user's
+ * critical path (kept on the higher-quality OPENAI_MODEL, e.g. gpt-4.1).
  *
- * Pipeline:
- *   1. Agenda Manager updates coverage + portrait (2 parallel LLM calls inside)
- *   2. Exploration Planner generates strategic questions (1 LLM call)
- *   3. Interviewer assembles full prompt + calls LLM for the next question (1 LLM call)
+ * It uses the AgentState produced by the previous turn's background analysis
+ * (computeUpdatedAgentState). The interviewer always sees the full raw history
+ * directly, so the latest answer is never missing — only the derived coverage /
+ * portrait / strategic-questions lag by one turn, which is an acceptable
+ * trade-off for removing 2–3 sequential LLM round-trips from the response time.
  *
- * @param latestQuestion  The interviewer's last question (just sent)
- * @param latestAnswer    The interviewee's latest response
- * @param history         Full transcript history up to and including latestAnswer
- * @param protocol        The active interview protocol
- * @param currentState    Current AgentState (from interviews.agent_state)
- * @returns               The generated question and the fully updated AgentState
+ * @param history       Full transcript history up to and including latestAnswer
+ * @param protocol      The active interview protocol
+ * @param currentState  AgentState from interviews.agent_state (previous turn)
  */
-export async function generateInterviewerResponse(
+export async function generateInterviewerQuestion(
+  history: TranscriptTurn[],
+  protocol: Protocol,
+  currentState: AgentState
+): Promise<GenerateQuestionOutput> {
+  const systemPrompt = buildInterviewerSystemPrompt(protocol, currentState);
+
+  return generateNextQuestion({
+    history,
+    systemPrompt,
+    protocolContext: "", // already embedded in systemPrompt via buildInterviewerSystemPrompt
+  });
+}
+
+/**
+ * Run the SparkMe analysis agents (Agenda Manager + Exploration Planner) and
+ * return the updated AgentState. This is intentionally OFF the critical path —
+ * it is invoked by /api/interview/analyze after the interviewer has already
+ * replied, so its latency (and the faster OPENAI_AGENT_MODEL it uses) never
+ * makes the participant wait. The result is persisted and consumed by the
+ * NEXT turn's generateInterviewerQuestion call.
+ *
+ * @param latestQuestion  The interviewer question that prompted latestAnswer
+ * @param latestAnswer    The interviewee's latest response
+ * @param history         Transcript history up to and including latestAnswer
+ * @param protocol        The active interview protocol
+ * @param currentState    Current AgentState to update
+ * @returns               The fully updated AgentState
+ */
+export async function computeUpdatedAgentState(
   latestQuestion: string,
   latestAnswer: string,
   history: TranscriptTurn[],
   protocol: Protocol,
   currentState: AgentState
-): Promise<{ output: GenerateQuestionOutput; updatedState: AgentState }> {
-  // ── Step 1: Agenda Manager ──────────────────────────────────────────────────
-  // Updates coverage notes + participant portrait in parallel.
-  // Falls back to currentState on any failure.
+): Promise<AgentState> {
+  // ── Agenda Manager: coverage notes + participant portrait (parallel) ────────
   const stateAfterMemory = await updateMemoryState(
     latestQuestion,
     latestAnswer,
@@ -71,31 +98,17 @@ export async function generateInterviewerResponse(
     currentState
   );
 
-  // ── Step 2: Exploration Planner ─────────────────────────────────────────────
-  // Generates priority-ranked strategic questions.
-  // Returns empty array on failure (interviewer handles the fallback).
+  // ── Exploration Planner: priority-ranked strategic questions ────────────────
   const strategicQuestions = await generateStrategicQuestions(
     history,
     protocol,
     stateAfterMemory
   );
 
-  const updatedState: AgentState = {
+  return {
     ...stateAfterMemory,
     strategicQuestions,
   };
-
-  // ── Step 3: Interviewer ─────────────────────────────────────────────────────
-  // Assemble the full SparkMe INTERVIEW_PROMPT and call the LLM.
-  const systemPrompt = buildInterviewerSystemPrompt(protocol, updatedState);
-
-  const output = await generateNextQuestion({
-    history,
-    systemPrompt,
-    protocolContext: "", // already embedded in systemPrompt via buildInterviewerSystemPrompt
-  });
-
-  return { output, updatedState };
 }
 
 /**

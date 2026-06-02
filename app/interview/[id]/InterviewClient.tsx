@@ -10,7 +10,7 @@ import { LiveCaption } from "@/components/interview/LiveCaption";
 import { TranscriptDrawer } from "@/components/interview/TranscriptDrawer";
 import { useSpeechRecognition } from "@/lib/hooks/useSpeechRecognition";
 import { useAudioRecorder } from "@/lib/hooks/useAudioRecorder";
-import { useTextToSpeech } from "@/lib/hooks/useTextToSpeech";
+import { useTextToSpeech, TTS_VOICE_OPTIONS, DEFAULT_TTS_VOICE } from "@/lib/hooks/useTextToSpeech";
 
 interface InterviewClientProps {
   interview: Interview;
@@ -53,6 +53,18 @@ export function InterviewClient({
   const [isTextInputOpen, setIsTextInputOpen]   = useState(false);
   const [textInput, setTextInput]               = useState("");
   const [isMuted, setIsMuted]                   = useState(false);
+  const [voice, setVoice]                       = useState<string>(DEFAULT_TTS_VOICE);
+
+  // Persist the chosen AI voice across reloads
+  useEffect(() => {
+    const saved = window.localStorage.getItem("sparkme.ttsVoice");
+    if (saved && TTS_VOICE_OPTIONS.some((v) => v.id === saved)) setVoice(saved);
+  }, []);
+  useEffect(() => {
+    window.localStorage.setItem("sparkme.ttsVoice", voice);
+  }, [voice]);
+  const [isTranscribing, setIsTranscribing]     = useState(false);
+  const [lastTranscriptSource, setLastTranscriptSource] = useState<"aws" | "browser" | null>(null);
 
   // Audio gate — true once the user clicks "Begin Interview".
   // Gating the first TTS call behind a user gesture satisfies Chrome's
@@ -61,6 +73,10 @@ export function InterviewClient({
 
   const typewriterRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const captionGenRef  = useRef(0);
+  // Id of the interviewer turn we've already animated, so unrelated `turns`
+  // updates (e.g. the background AWS transcript refine) don't restart the
+  // AI's speech/caption from the beginning.
+  const animatedTurnIdRef = useRef<string | null>(null);
 
   // Hooks
   const speech = useSpeechRecognition();
@@ -112,7 +128,12 @@ export function InterviewClient({
   useEffect(() => {
     if (turns.length === 0 || !hasBegun) return;
     const last = turns[turns.length - 1];
-    if (last.speaker === "interviewer" && !isLoading) {
+    if (
+      last.speaker === "interviewer" &&
+      !isLoading &&
+      last.id !== animatedTurnIdRef.current
+    ) {
+      animatedTurnIdRef.current = last.id;
       void animateAICaption(last.text);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +152,7 @@ export function InterviewClient({
     setOrbState("speaking");
     setCaption("");
 
-    const audioDurationSec = isMuted ? 0 : await tts.speak(text);
+    const audioDurationSec = isMuted ? 0 : await tts.speak(text, voice);
     if (gen !== captionGenRef.current) return;
 
     let msPerChar = TYPEWRITER_MS;
@@ -152,7 +173,7 @@ export function InterviewClient({
       }
     };
     typewriterRef.current = setTimeout(step, msPerChar);
-  }, [tts, isMuted]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tts, isMuted, voice]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ==========================================================================
   // Interview initialisation
@@ -203,8 +224,8 @@ export function InterviewClient({
   // Submit a participant response
   // ==========================================================================
 
-  const handleSubmit = useCallback(async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  const handleSubmit = useCallback(async (text: string): Promise<string | null> => {
+    if (!text.trim() || isLoading) return null;
 
     setTextInput("");
     setIsLoading(true);
@@ -250,37 +271,188 @@ export function InterviewClient({
         ];
       });
 
+      const intervieweeTurnId =
+        (data.interviewee_turn as TranscriptTurn | undefined)?.id ?? null;
+
       if (data.is_complete) {
         router.push(`/complete?interview_id=${interview.id}`);
+      } else {
+        // Fire-and-forget the background analysis (Agenda Manager + Planner) so
+        // the heavy agents run OFF the critical path and prep state for the next
+        // turn. Never awaited — it must not delay the spoken response.
+        void fetch("/api/interview/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ interview_id: interview.id }),
+        }).catch(() => {});
       }
+
+      return intervieweeTurnId;
     } catch (err) {
       setTurns((prev) => prev.filter((t) => !t.id.startsWith("optimistic-")));
       setOrbState("idle");
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      return null;
     } finally {
       setIsLoading(false);
     }
   }, [isLoading, interview.id, turns.length, router]);
 
   // ==========================================================================
+  // Refine a saved interviewee turn with the accurate AWS transcript.
+  // Runs in the background after the conversation already proceeded on the
+  // instant browser transcript — improves the stored/displayed record only.
+  // ==========================================================================
+
+  const refineTranscript = useCallback(async (turnId: string, text: string) => {
+    try {
+      const res = await fetch("/api/interview/refine-turn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interview_id: interview.id, turn_id: turnId, text }),
+      });
+      if (!res.ok) return;
+      setTurns((prev) => prev.map((t) => (t.id === turnId ? { ...t, text } : t)));
+      setLastTranscriptSource("aws");
+    } catch {
+      // Keep the browser transcript on any failure
+    }
+  }, [interview.id]);
+
+  // ==========================================================================
+  // Voice selection — preview the chosen voice immediately so the change is
+  // audible in real time (the next interview turn also uses it automatically).
+  // ==========================================================================
+
+  const handleVoiceChange = useCallback((newVoice: string) => {
+    setVoice(newVoice);
+    if (isMuted || isLoading) return;
+
+    // Stop any in-progress AI speech/caption so the preview is clean
+    captionGenRef.current++;
+    if (typewriterRef.current) {
+      clearTimeout(typewriterRef.current);
+      typewriterRef.current = null;
+    }
+    setIsAnimatingCaption(false);
+
+    // unlock() must run synchronously within this click gesture
+    tts.unlock();
+    setOrbState("speaking");
+    void tts.speak("Hi! This is how I'll sound for your interview.", newVoice);
+  }, [isMuted, isLoading, tts]);
+
+  // ==========================================================================
+  // AWS Transcribe helper — sends recorded blob to server, returns text.
+  // Falls back silently (returns "") so the caller can use Web Speech instead.
+  // ==========================================================================
+
+  const transcribeAudio = useCallback(async (blob: Blob): Promise<{ text: string; source: "aws" | "browser" }> => {
+    if (blob.size === 0) return { text: "", source: "browser" };
+    try {
+      const ext = blob.type.includes("mp4") ? "mp4"
+                : blob.type.includes("ogg") ? "ogg"
+                : "webm";
+      const formData = new FormData();
+      formData.append("audio", blob, `recording.${ext}`);
+
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 55_000);
+
+      try {
+        const res = await fetch("/api/transcribe", {
+          method: "POST",
+          body:   formData,
+          signal: controller.signal,
+        });
+        if (!res.ok) return { text: "", source: "browser" };
+        const data = await res.json() as { transcript?: string; source?: string };
+        const text = data.transcript?.trim() ?? "";
+        const source = data.source === "aws" ? "aws" : "browser";
+        console.log(`[transcribe] source=${source} chars=${text.length}`, text.slice(0, 80));
+        return { text, source };
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch {
+      return { text: "", source: "browser" };
+    }
+  }, []);
+
+  // ==========================================================================
   // Voice mode: press-to-talk
   // ==========================================================================
 
   const handleMicPress = useCallback(async () => {
+    console.log(`[mic] press — recorderState=${audio.recorderState} orbState=${orbState}`);
     if (orbState === "thinking" || turns.length === 0) return;
 
     if (audio.recorderState === "recording") {
-      audio.stopRecording(interview.id);
+      console.log("[mic] stopping recording");
+      // Grab the live browser (Web Speech) transcript captured while recording.
+      const browserText = (speech.finalTranscript + speech.interimTranscript).trim();
       speech.stopListening();
-
-      const finalText = (speech.finalTranscript + speech.interimTranscript).trim();
       speech.resetTranscript();
 
-      if (finalText) {
-        await handleSubmit(finalText);
+      // stopRecording returns the audio blob immediately once MediaRecorder
+      // flushes; the Supabase upload continues in the background.
+      const blobPromise = audio.stopRecording(interview.id);
+
+      if (browserText) {
+        // ── Fast path ──────────────────────────────────────────────────────
+        // Drive the conversation instantly on the browser transcript (no AWS
+        // wait), then refine the saved turn with the accurate AWS transcript
+        // in the background.
+        setLastTranscriptSource("browser");
+        const intervieweeTurnId = await handleSubmit(browserText);
+
+        void (async () => {
+          try {
+            const blob   = await blobPromise;
+            const result = await transcribeAudio(blob);
+            if (
+              result.text &&
+              result.source === "aws" &&
+              intervieweeTurnId &&
+              result.text !== browserText
+            ) {
+              await refineTranscript(intervieweeTurnId, result.text);
+            }
+          } catch {
+            // Keep the browser transcript on any failure
+          }
+        })();
       } else {
-        setOrbState("idle");
+        // ── Fallback path ──────────────────────────────────────────────────
+        // No instant browser transcript (e.g. Safari/iOS lacks Web Speech), so
+        // we must wait for AWS before we have anything to submit.
+        setIsTranscribing(true);
+        setOrbState("thinking");
         setCaptionSpeaker(null);
+        setCaption("");
+
+        let finalText = "";
+        let usedSource: "aws" | "browser" = "browser";
+        try {
+          const blob   = await blobPromise;
+          const result = await transcribeAudio(blob);
+          if (result.text) {
+            finalText  = result.text;
+            usedSource = result.source;
+          }
+        } catch (e) {
+          console.warn("[mic] transcribeAudio threw", e);
+        } finally {
+          setIsTranscribing(false);
+          setLastTranscriptSource(usedSource);
+        }
+
+        if (finalText) {
+          await handleSubmit(finalText);
+        } else {
+          setOrbState("idle");
+          setCaptionSpeaker(null);
+        }
       }
     } else {
       captionGenRef.current++;
@@ -295,12 +467,14 @@ export function InterviewClient({
       setCaptionSpeaker("user");
       setCaption("");
 
-      await audio.startRecording();
+      console.log("[mic] starting recording…");
+      const started = await audio.startRecording();
+      console.log(`[mic] startRecording success=${started} — press mic again to STOP and transcribe`);
       if (speech.isSupported) {
         speech.startListening();
       }
     }
-  }, [orbState, audio, speech, tts, interview.id, turns.length, handleSubmit]);
+  }, [orbState, audio, speech, tts, interview.id, turns.length, handleSubmit, transcribeAudio, refineTranscript]);
 
   // ==========================================================================
   // Begin — unlocks AudioContext within the gesture, then starts the interview
@@ -394,7 +568,7 @@ export function InterviewClient({
 
   const isRecording   = audio.recorderState === "recording";
   const canInteract   = turns.length > 0 && !interview.completed;
-  const isMicDisabled = orbState === "thinking" || !canInteract;
+  const isMicDisabled = orbState === "thinking" || !canInteract || isTranscribing;
 
   const formatDuration = (s: number) =>
     `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
@@ -409,12 +583,37 @@ export function InterviewClient({
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="relative z-10 flex items-center justify-between px-5 py-3
                          bg-white border-b border-stone-200">
-        {/* Left: session badge */}
-        <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-stone-400" />
-          <span className="text-[11px] text-stone-400 font-mono tracking-widest uppercase">
-            {studyId}
-          </span>
+        {/* Left: session badge + AI voice picker */}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-stone-400" />
+            <span className="text-[11px] text-stone-400 font-mono tracking-widest uppercase">
+              {studyId}
+            </span>
+          </div>
+
+          <label
+            className="relative flex items-center gap-1.5 pl-2.5 pr-1 py-1.5 rounded-full
+                       border border-stone-200 bg-stone-50 text-stone-500
+                       hover:border-stone-400 hover:bg-stone-100 transition-colors duration-150"
+            title="Choose the interviewer's voice"
+          >
+            <VoiceSelectIcon className="w-4 h-4 shrink-0" />
+            <select
+              value={voice}
+              onChange={(e) => handleVoiceChange(e.target.value)}
+              aria-label="Interviewer voice"
+              className="appearance-none bg-transparent pr-5 text-[12px] font-medium
+                         text-stone-700 focus:outline-none cursor-pointer"
+            >
+              {TTS_VOICE_OPTIONS.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label} — {v.description}
+                </option>
+              ))}
+            </select>
+            <ChevronIcon className="w-3.5 h-3.5 rotate-180 absolute right-2 pointer-events-none text-stone-400" />
+          </label>
         </div>
 
         {/* Center: title */}
@@ -474,9 +673,26 @@ export function InterviewClient({
           )}
         </div>
 
+        {/* Transcription source badge — shows after each voice turn */}
+        {lastTranscriptSource && !isTranscribing && !isRecording && (
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-mono tracking-widest uppercase
+                          ${lastTranscriptSource === "aws"
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-600"
+                            : "bg-stone-100 border-stone-200 text-stone-400"
+                          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${lastTranscriptSource === "aws" ? "bg-emerald-400" : "bg-stone-300"}`} />
+            {lastTranscriptSource === "aws" ? "AWS Transcribe" : "Browser fallback"}
+          </div>
+        )}
+
         {/* Status label */}
         <div className="text-center h-5">
-          {isLoading && orbState === "thinking" && (
+          {isTranscribing && (
+            <p className="text-[11px] text-violet-500 tracking-widest uppercase animate-pulse">
+              Transcribing
+            </p>
+          )}
+          {isLoading && orbState === "thinking" && !isTranscribing && (
             <p className="text-[11px] text-stone-400 tracking-widest uppercase animate-pulse">
               Processing
             </p>
@@ -730,6 +946,15 @@ function VolumeOffIcon({ className }: { className?: string }) {
       <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H2v6h4l5 4V5z" />
       <line x1="23" y1="9" x2="17" y2="15" strokeLinecap="round" />
       <line x1="17" y1="9" x2="23" y2="15" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function VoiceSelectIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a3 3 0 00-3 3v6a3 3 0 006 0V5a3 3 0 00-3-3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 11a7 7 0 0014 0M12 18v3" />
     </svg>
   );
 }
