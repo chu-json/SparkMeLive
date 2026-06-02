@@ -19,8 +19,6 @@ export const TTS_VOICE_OPTIONS: VoiceOption[] = [
   { id: "ash",     label: "Ash",     description: "Warm, conversational — male" },
   { id: "echo",    label: "Echo",    description: "Steady, clear — male" },
   { id: "onyx",    label: "Onyx",    description: "Deep, grounded — male" },
-  { id: "verse",   label: "Verse",   description: "Lively, animated — male" },
-  { id: "ballad",  label: "Ballad",  description: "Gentle storyteller" },
   { id: "fable",   label: "Fable",   description: "Expressive narrator" },
 ];
 
@@ -50,6 +48,8 @@ export interface TTSControls {
    * gesture chain.
    */
   unlock: () => void;
+  /** Short cached preview for a voice (used by the voice dropdown). */
+  previewVoice: (voice: string) => Promise<number>;
 }
 
 type TTSMode = "api" | "browser" | "unknown";
@@ -86,6 +86,10 @@ export function useTextToSpeech(): TTSState & TTSControls {
   // Synthetic wave refs (browser tier)
   const synthRafRef     = useRef<number>(0);
   const tPhaseRef       = useRef(0);
+
+  // Per-voice preview cache — avoids repeat API calls when browsing the dropdown
+  const previewCacheRef      = useRef<Map<string, ArrayBuffer>>(new Map());
+  const previewAbortRef      = useRef<AbortController | null>(null);
 
   const isSupported =
     typeof window !== "undefined" &&
@@ -155,66 +159,97 @@ export function useTextToSpeech(): TTSState & TTSControls {
 
   // ── Tier 1: OpenAI TTS via API route ─────────────────────────────────────
 
-  const speakViaAPI = useCallback(async (text: string, voice?: string): Promise<number> => {
-    try {
+  const playArrayBuffer = useCallback(async (arrayBuffer: ArrayBuffer): Promise<number> => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      audioCtxRef.current = new AudioContext();
+    }
+    const ctx = audioCtxRef.current;
+    if (ctx.state === "suspended") await ctx.resume();
+
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    const duration    = audioBuffer.duration;
+
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 256;
+    analyser.smoothingTimeConstant = 0.6;
+    analyserRef.current = analyser;
+
+    const source = ctx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(analyser);
+    analyser.connect(ctx.destination);
+    sourceNodeRef.current = source;
+
+    source.onended = () => {
+      cancelAnimationFrame(ampRafRef.current);
+      ttsAmplitudeRef.current = 0;
+      setIsSpeaking(false);
+      setLastAudioDuration(0);
+    };
+
+    source.start(0);
+    setIsSpeaking(true);
+    setLastAudioDuration(duration);
+    startAmplitudeLoop();
+    modeRef.current = "api";
+    return duration;
+  }, [startAmplitudeLoop]);
+
+  const fetchTTSAudio = useCallback(
+    async (text: string, voice?: string, signal?: AbortSignal): Promise<ArrayBuffer | null> => {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(voice ? { text, voice } : { text }),
+        signal,
       });
 
       if (!res.ok) {
-        if (res.status === 503) {
-          // Key not configured — switch to browser tier permanently
-          modeRef.current = "browser";
-        }
-        return 0;
+        if (res.status === 503) modeRef.current = "browser";
+        return null;
       }
+      return res.arrayBuffer();
+    },
+    []
+  );
 
-      const arrayBuffer = await res.arrayBuffer();
-
-      // Create (or reuse) AudioContext
-      if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-
-      // Resume if suspended (browser autoplay policy)
-      if (ctx.state === "suspended") await ctx.resume();
-
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      const duration    = audioBuffer.duration;
-
-      // Connect graph: source → analyser → destination
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.6;
-      analyserRef.current = analyser;
-
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(analyser);
-      analyser.connect(ctx.destination);
-      sourceNodeRef.current = source;
-
-      source.onended = () => {
-        cancelAnimationFrame(ampRafRef.current);
-        ttsAmplitudeRef.current = 0;
-        setIsSpeaking(false);
-        setLastAudioDuration(0);
-      };
-
-      source.start(0);
-      setIsSpeaking(true);
-      setLastAudioDuration(duration);
-      startAmplitudeLoop();
-
-      modeRef.current = "api";
-      return duration;
+  const speakViaAPI = useCallback(async (text: string, voice?: string): Promise<number> => {
+    try {
+      const arrayBuffer = await fetchTTSAudio(text, voice);
+      if (!arrayBuffer) return 0;
+      return playArrayBuffer(arrayBuffer);
     } catch {
       return 0;
     }
-  }, [startAmplitudeLoop]);
+  }, [fetchTTSAudio, playArrayBuffer]);
+
+  const PREVIEW_PHRASE = "Hi.";
+
+  const previewVoice = useCallback(async (voice: string): Promise<number> => {
+    stopAll();
+    const cached = previewCacheRef.current.get(voice);
+    if (cached) {
+      try {
+        return await playArrayBuffer(cached);
+      } catch {
+        previewCacheRef.current.delete(voice);
+      }
+    }
+
+    previewAbortRef.current?.abort();
+    const ac = new AbortController();
+    previewAbortRef.current = ac;
+
+    try {
+      const arrayBuffer = await fetchTTSAudio(PREVIEW_PHRASE, voice, ac.signal);
+      if (!arrayBuffer) return 0;
+      previewCacheRef.current.set(voice, arrayBuffer);
+      return playArrayBuffer(arrayBuffer);
+    } catch (err) {
+      if ((err as Error).name === "AbortError") return 0;
+      return 0;
+    }
+  }, [stopAll, fetchTTSAudio, playArrayBuffer]);
 
   // ── Tier 2: Browser SpeechSynthesis fallback ─────────────────────────────
 
@@ -299,5 +334,6 @@ export function useTextToSpeech(): TTSState & TTSControls {
     speak,
     stop,
     unlock,
+    previewVoice,
   };
 }

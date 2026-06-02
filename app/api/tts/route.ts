@@ -12,8 +12,8 @@
 //   tts-1           — older, faster, more robotic. ~300ms latency.
 //   tts-1-hd        — older, higher fidelity than tts-1. ~600ms latency.
 //
-// Voices (gpt-4o-mini-tts supports all of these):
-//   alloy · ash · ballad · coral · echo · fable · nova · onyx · sage · shimmer · verse
+// Voices (gpt-4o-mini-tts — must match OpenAI's enum exactly):
+//   alloy · ash · coral · echo · fable · nova · onyx · sage · shimmer
 //   The client may pass { voice } in the body to pick one per request; an
 //   invalid/absent value falls back to OPENAI_TTS_VOICE (default "nova").
 //
@@ -31,8 +31,8 @@ import OpenAI from "openai";
 
 // Voices accepted by gpt-4o-mini-tts. Kept in sync with the client dropdown.
 const VALID_VOICES = [
-  "alloy", "ash", "ballad", "coral", "echo",
-  "fable", "nova", "onyx", "sage", "shimmer", "verse",
+  "alloy", "ash", "coral", "echo", "fable",
+  "nova", "onyx", "sage", "shimmer",
 ] as const;
 type Voice = (typeof VALID_VOICES)[number];
 

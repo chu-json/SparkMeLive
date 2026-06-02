@@ -17,8 +17,11 @@ export default async function Home() {
     .single();
 
   if (!participant) {
-    // Auth user exists but no participant row — clear session and go to login
-    redirect("/login");
+    // Auth user exists but no matching participant row (orphaned/stale session,
+    // e.g. after a DB reseed). Clear the cookies via the logout route instead of
+    // bouncing to /login — otherwise middleware sees the still-valid user and
+    // redirects back to "/", creating an infinite loop.
+    redirect("/api/auth/logout");
   }
 
   // Find their most recent interview
@@ -31,7 +34,9 @@ export default async function Home() {
     .single();
 
   if (!interview) {
-    redirect("/login");
+    // Participant exists but has no interview row — same loop risk as above.
+    // Clear the session so re-login through the API recreates a fresh interview.
+    redirect("/api/auth/logout");
   }
 
   if (interview.completed) {

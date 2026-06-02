@@ -77,6 +77,7 @@ export function InterviewClient({
   // updates (e.g. the background AWS transcript refine) don't restart the
   // AI's speech/caption from the beginning.
   const animatedTurnIdRef = useRef<string | null>(null);
+  const voicePreviewTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Hooks
   const speech = useSpeechRecognition();
@@ -326,21 +327,27 @@ export function InterviewClient({
 
   const handleVoiceChange = useCallback((newVoice: string) => {
     setVoice(newVoice);
+    // unlock() must run synchronously within this click gesture (before any await)
+    tts.unlock();
+
     if (isMuted || isLoading) return;
 
-    // Stop any in-progress AI speech/caption so the preview is clean
-    captionGenRef.current++;
-    if (typewriterRef.current) {
-      clearTimeout(typewriterRef.current);
-      typewriterRef.current = null;
-    }
-    setIsAnimatingCaption(false);
+    if (voicePreviewTimerRef.current) clearTimeout(voicePreviewTimerRef.current);
+    tts.stop();
 
-    // unlock() must run synchronously within this click gesture
-    tts.unlock();
-    setOrbState("speaking");
-    void tts.speak("Hi! This is how I'll sound for your interview.", newVoice);
+    // Debounce rapid dropdown changes — each preview is a TTS API call (~1–5s).
+    // Cached after the first play per voice so re-selecting is instant.
+    voicePreviewTimerRef.current = setTimeout(() => {
+      setOrbState("speaking");
+      void tts.previewVoice(newVoice);
+    }, 350);
   }, [isMuted, isLoading, tts]);
+
+  useEffect(() => {
+    return () => {
+      if (voicePreviewTimerRef.current) clearTimeout(voicePreviewTimerRef.current);
+    };
+  }, []);
 
   // ==========================================================================
   // AWS Transcribe helper — sends recorded blob to server, returns text.
